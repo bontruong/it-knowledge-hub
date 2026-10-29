@@ -938,3 +938,37 @@ textarea.code-input {
   color: var(--text-primary);
 }
 
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  border-radius: var(--radius-sm);
+}
+
+.badge-status-active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--status-verified-text);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.badge-status-locked {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--sev-p1-text);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.user-actions-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+
