@@ -658,7 +658,8 @@ body {
   z-index: 500;
 }
 
-.modal-backdrop.open {
+.modal-backdrop.open,
+.modal-backdrop.active {
   display: flex;
 }
 
