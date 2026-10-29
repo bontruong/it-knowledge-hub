@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'NDS_IT_KB_HUB_ARTICLES_V2';
+  const STORAGE_KEY = 'NDS_IT_KB_HUB_HANDOVER_V3';
   const THEME_KEY = 'IT_KB_HUB_THEME_V1';
   const RBAC_ROLE_KEY = 'IT_KB_HUB_ROLE_V1';
   const GH_CONFIG_KEY = 'IT_KB_HUB_GH_CONFIG_V1';
@@ -53,13 +53,14 @@
   ];
 
   const SYSTEM_CATEGORIES = [
-    { id: 'ALL', name: 'Tất cả hệ thống', icon: '🌐' },
-    { id: 'Cloud & Infrastructure', name: 'Cloud & Infra', icon: '☁️' },
-    { id: 'Network & Firewall', name: 'Network & Firewall', icon: '🛡️' },
-    { id: 'Identity & Security (IAM)', name: 'Identity & IAM', icon: '🔐' },
-    { id: 'Database & Storage', name: 'Database & Storage', icon: '🗄️' },
-    { id: 'CI/CD & DevOps', name: 'CI/CD & DevOps', icon: '🚀' },
-    { id: 'Endpoint & Helpdesk', name: 'Endpoint & Helpdesk', icon: '💻' }
+    { id: 'ALL', name: 'Tất cả hạng mục bàn giao (47)', icon: '📁' },
+    { id: 'Helpdesk', name: '1. Helpdesk & Biểu mẫu', icon: '💻' },
+    { id: 'Hệ thống ứng dụng nội bộ', name: '2. Ứng dụng nội bộ', icon: '📱' },
+    { id: 'Hệ thống hạ tầng', name: '3. Hạ tầng & Server QTSC', icon: '🖥️' },
+    { id: 'Hệ thống Cloud', name: '4. Hệ thống Cloud', icon: '☁️' },
+    { id: 'Microsoft services', name: '5. Microsoft Services', icon: '🏢' },
+    { id: 'Hỗ trợ hạ tầng cho hệ thống ứng dụng khách hàng', name: '6. Ứng dụng khách hàng', icon: '🛒' },
+    { id: 'Các việc còn lại & phát sinh', name: '7. Tên miền, App & 20 HĐ', icon: '🌐' }
   ];
 
   const DEFAULT_ARTICLES = [
@@ -1051,6 +1052,198 @@
     });
   }
 
+  // Document Upload & Attachment Management
+  function getFileIcon(fileName) {
+    const ext = (fileName || '').split('.').pop().toLowerCase();
+    if (ext === 'pdf') return '📕';
+    if (['doc', 'docx'].includes(ext)) return '📘';
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return '📗';
+    if (['ppt', 'pptx'].includes(ext)) return '📙';
+    if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext)) return '🖼️';
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return '📦';
+    if (['txt', 'md', 'json', 'ps1', 'sh', 'py'].includes(ext)) return '📄';
+    return '📎';
+  }
+
+  function formatFileSize(bytes) {
+    if (!bytes || isNaN(bytes)) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function downloadAttachment(dataUrl, fileName) {
+    if (!dataUrl) {
+      showToast('⚠️ Không tìm thấy nội dung file để tải về!');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = fileName || 'tai-lieu-ban-giao';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast('📥 Đã tải xuống: ' + fileName);
+  }
+
+  function renderAttachmentsForReader(art) {
+    const countEl = document.getElementById('readerAttachmentCount');
+    const listEl = document.getElementById('readerAttachmentsList');
+    if (!countEl || !listEl) return;
+
+    if (!Array.isArray(art.attachments)) {
+      art.attachments = [];
+    }
+
+    countEl.textContent = art.attachments.length;
+    listEl.innerHTML = '';
+
+    if (art.attachments.length === 0) {
+      listEl.innerHTML =
+        '<div style="grid-column: 1 / -1; font-size:0.82rem; color:var(--text-muted); font-style:italic; padding:8px 0;">' +
+        'Chưa có tài liệu nào được tải lên cho hạng mục này. Hãy bấm "Tải lên tài liệu" hoặc kéo thả file để lưu trữ.' +
+        '</div>';
+      return;
+    }
+
+    art.attachments.forEach(function (att, idx) {
+      const card = document.createElement('div');
+      card.className = 'attachment-card';
+      const icon = getFileIcon(att.name);
+      const sizeStr = formatFileSize(att.size);
+      const dateStr = att.uploadedAt || 'Mới tải';
+
+      card.innerHTML =
+        '<div class="attachment-icon">' + icon + '</div>' +
+        '<div class="attachment-info">' +
+        '  <div class="attachment-name" title="' + escapeHtml(att.name) + '">' + escapeHtml(att.name) + '</div>' +
+        '  <div class="attachment-meta"><span>' + sizeStr + '</span><span>•</span><span>' + escapeHtml(dateStr) + '</span></div>' +
+        '</div>' +
+        '<div class="attachment-actions">' +
+        '  <button type="button" class="btn btn-sm btn-primary" data-act="download" title="Tải về máy">📥 Tải về</button>' +
+        (canCreateOrEdit() ? '  <button type="button" class="btn btn-sm btn-danger" data-act="delete" title="Xóa tài liệu">🗑️</button>' : '') +
+        '</div>';
+
+      card.querySelector('button[data-act="download"]').addEventListener('click', function () {
+        downloadAttachment(att.dataUrl, att.name);
+      });
+
+      if (canCreateOrEdit()) {
+        const delBtn = card.querySelector('button[data-act="delete"]');
+        if (delBtn) {
+          delBtn.addEventListener('click', function () {
+            if (!confirm('Bạn có chắc muốn xóa tài liệu "' + att.name + '"?')) return;
+            art.attachments.splice(idx, 1);
+            saveArticles('kb(attachments): delete file ' + att.name + ' from ' + art.id);
+            renderAttachmentsForReader(art);
+            showToast('🗑️ Đã xóa tài liệu: ' + att.name);
+          });
+        }
+      }
+
+      listEl.appendChild(card);
+    });
+  }
+
+  function processFilesUpload(art, files) {
+    if (!files || files.length === 0) return;
+    if (!canCreateOrEdit()) {
+      showToast('🛑 Từ chối quyền: Bạn không có quyền tải lên tài liệu!');
+      return;
+    }
+
+    if (!Array.isArray(art.attachments)) {
+      art.attachments = [];
+    }
+
+    let loadedCount = 0;
+    const totalFiles = files.length;
+    showToast('⏳ Đang xử lý tải lên ' + totalFiles + ' tài liệu...');
+
+    Array.from(files).forEach(function (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        art.attachments.push({
+          name: file.name,
+          size: file.size,
+          type: file.type || 'application/octet-stream',
+          dataUrl: e.target.result,
+          uploadedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+        });
+        loadedCount++;
+        if (loadedCount === totalFiles) {
+          saveArticles('kb(attachments): uploaded ' + totalFiles + ' files to ' + art.id);
+          renderAttachmentsForReader(art);
+          showToast('✅ Đã tải lên và lưu trữ thành công ' + totalFiles + ' tài liệu!');
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Repository Center Modal (7 Handover Groups Tree)
+  function openRepoCenterModal() {
+    const modal = document.getElementById('repoModal');
+    if (!modal) return;
+    renderRepoGroupsTree();
+    modal.classList.add('active');
+  }
+
+  function closeRepoCenterModal() {
+    const modal = document.getElementById('repoModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function renderRepoGroupsTree() {
+    const container = document.getElementById('repoGroupsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const groups = SYSTEM_CATEGORIES.filter(function (c) { return c.id !== 'ALL'; });
+    groups.forEach(function (grp) {
+      const groupArticles = articles.filter(function (a) { return a.system === grp.id; });
+      let totalFiles = 0;
+      groupArticles.forEach(function (a) {
+        if (Array.isArray(a.attachments)) totalFiles += a.attachments.length;
+      });
+
+      const card = document.createElement('div');
+      card.className = 'repo-folder-card';
+
+      let itemsHtml = '';
+      groupArticles.forEach(function (a) {
+        const fileCount = Array.isArray(a.attachments) ? a.attachments.length : 0;
+        itemsHtml +=
+          '<li style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed var(--border-color); font-size:0.84rem;">' +
+          '  <span>' + escapeHtml(a.id) + ' • <strong>' + escapeHtml(a.title) + '</strong></span>' +
+          '  <div style="display:flex; align-items:center; gap:8px;">' +
+          '    <span style="font-size:0.75rem; color:var(--text-muted);">' + fileCount + ' file</span>' +
+          '    <button type="button" class="btn btn-sm" data-open-art="' + escapeHtml(a.id) + '">📂 Mở &amp; Tải file</button>' +
+          '  </div>' +
+          '</li>';
+      });
+
+      card.innerHTML =
+        '<div class="repo-folder-header">' +
+        '  <div class="repo-folder-title">' + grp.icon + ' ' + escapeHtml(grp.name) + ' (' + groupArticles.length + ' hạng mục)</div>' +
+        '  <span class="repo-folder-badge">📁 ' + totalFiles + ' tài liệu đã lưu</span>' +
+        '</div>' +
+        '<ul style="list-style:none; padding:0; margin:8px 0 0 0;">' +
+        itemsHtml +
+        '</ul>';
+
+      card.querySelectorAll('button[data-open-art]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          const artId = b.getAttribute('data-open-art');
+          closeRepoCenterModal();
+          openReaderModal(artId);
+        });
+      });
+
+      container.appendChild(card);
+    });
+  }
+
   function openReaderModal(articleId) {
     const art = articles.find(function (a) {
       return a.id === articleId;
@@ -1177,6 +1370,7 @@
       body.appendChild(secCheck);
     }
 
+    renderAttachmentsForReader(art);
     document.getElementById('readerModal').classList.add('open');
   }
 
@@ -1510,6 +1704,64 @@
     const userForm = document.getElementById('createUserForm');
     if (userForm) userForm.addEventListener('submit', handleCreateUserSubmit);
 
+    // Handover Document Repository Center bindings
+    const btnRepo = document.getElementById('btnRepoCenter');
+    if (btnRepo) btnRepo.addEventListener('click', openRepoCenterModal);
+
+    const btnCloseRepo = document.getElementById('btnCloseRepoModal');
+    if (btnCloseRepo) btnCloseRepo.addEventListener('click', closeRepoCenterModal);
+
+    // Article Reader Document Upload bindings
+    const btnUpload = document.getElementById('btnUploadDoc');
+    const fileInp = document.getElementById('readerFileInput');
+    const dropzone = document.getElementById('readerDropzone');
+
+    if (btnUpload && fileInp) {
+      btnUpload.addEventListener('click', function () {
+        fileInp.click();
+      });
+    }
+
+    if (fileInp) {
+      fileInp.addEventListener('change', function (e) {
+        if (!activeReaderArticleId) return;
+        const art = articles.find(function (a) { return a.id === activeReaderArticleId; });
+        if (art && e.target.files && e.target.files.length > 0) {
+          processFilesUpload(art, e.target.files);
+          fileInp.value = '';
+        }
+      });
+    }
+
+    if (dropzone) {
+      dropzone.addEventListener('click', function () {
+        if (fileInp) fileInp.click();
+      });
+
+      dropzone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+
+      dropzone.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      });
+
+      dropzone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+        if (!activeReaderArticleId) return;
+        const art = articles.find(function (a) { return a.id === activeReaderArticleId; });
+        if (art && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          processFilesUpload(art, e.dataTransfer.files);
+        }
+      });
+    }
+
     document.getElementById('btnGitHubAuth').addEventListener('click', openGitHubModal);
     document.getElementById('btnGateLogin').addEventListener('click', openGitHubModal);
     document.getElementById('btnCloseGitHubModal').addEventListener('click', closeGitHubModal);
@@ -1629,6 +1881,7 @@
         closeEditorModal();
         closeGitHubModal();
         closeUserModal();
+        closeRepoCenterModal();
       }
     });
   }
