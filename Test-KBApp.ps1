@@ -47,16 +47,20 @@ Assert-Test "All 15 articles have complete metadata & content fields" $AllPropsV
 
 # 3. Accessibility, Security & Document Handover Repository Check
 $Html = Get-Content -LiteralPath (Join-Path $RootDir 'index.html') -Raw -Encoding UTF8
+$Css  = Get-Content -LiteralPath (Join-Path $RootDir 'styles.css') -Raw -Encoding UTF8
 $Js   = Get-Content -LiteralPath (Join-Path $RootDir 'app.js') -Raw -Encoding UTF8
 
 Assert-Test "HTML includes WCAG Skip Link & ARIA landmarks" ($Html.Contains('class="skip-link"') -and $Html.Contains('role="search"') -and $Html.Contains('aria-modal="true"'))
 Assert-Test "HTML includes GitHub RBAC Modal & Role Badge" ($Html.Contains('id="githubModal"') -and $Html.Contains('id="currentRoleBadge"'))
 Assert-Test "HTML includes User Management Modal & User Button" ($Html.Contains('id="userModal"') -and $Html.Contains('id="btnUserManager"'))
 Assert-Test "HTML includes Document Upload Dropzone & Repo Modal" ($Html.Contains('id="readerDropzone"') -and $Html.Contains('id="repoModal"') -and $Html.Contains('id="btnRepoCenter"'))
+Assert-Test "CSS supports modal backdrop open and active display states" ($Css.Contains('.modal-backdrop.open') -and $Css.Contains('.modal-backdrop.active'))
 Assert-Test "JS implements escapeHtml XSS sanitization" ($Js.Contains('function escapeHtml('))
 Assert-Test "JS implements Tier 1 Zero Secret Leakage Guardrail" ($Js.Contains('function detectPlaintextSecrets('))
 Assert-Test "JS implements RBAC permission checks (Admin/Editor/Viewer)" ($Js.Contains('function canCreateOrEdit(') -and $Js.Contains('function canDeleteOrImport('))
 Assert-Test "JS implements User Management and Switch User" ($Js.Contains('function openUserModal(') -and $Js.Contains('function handleCreateUserSubmit('))
+Assert-Test "JS strictly hides GitHub, Export JSON, Import JSON and UserManager from Editor role" ($Js.Contains('btnExport.style.display = isAdmin') -and $Js.Contains('btnGh.style.display = isAdmin') -and $Js.Contains('btnUserMgr.style.display = isAdmin'))
+Assert-Test "JS opens UserModal and RepoModal with active and open classes" ($Js.Contains("modal.classList.add('open')") -and $Js.Contains("modal.classList.add('active')"))
 Assert-Test "JS implements Document Upload & Attachment Download" ($Js.Contains('function processFilesUpload(') -and $Js.Contains('function downloadAttachment('))
 Assert-Test "JS implements 7 Handover Groups Repository Center" ($Js.Contains('function openRepoCenterModal(') -and $Js.Contains('function renderRepoGroupsTree('))
 Assert-Test "JS implements GitHub REST API v3 sync & commit" ($Js.Contains('function connectAndSyncFromGitHub(') -and $Js.Contains('function pushArticlesToGitHub('))
