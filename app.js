@@ -419,12 +419,16 @@
     if (createSec) {
       createSec.style.display = canDeleteOrImport() ? 'block' : 'none';
     }
+    modal.classList.add('open');
     modal.classList.add('active');
   }
 
   function closeUserModal() {
     const modal = document.getElementById('userModal');
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+      modal.classList.remove('open');
+      modal.classList.remove('active');
+    }
   }
 
   function handleCreateUserSubmit(e) {
@@ -482,40 +486,65 @@
     const badge = document.getElementById('currentRoleBadge');
     const btnNew = document.getElementById('btnNewArticle');
     const lblImport = document.getElementById('lblImportJson');
+    const btnExport = document.getElementById('btnExportJson');
+    const btnGh = document.getElementById('btnGitHubAuth');
+    const btnUserMgr = document.getElementById('btnUserManager');
     const btnEdit = document.getElementById('btnEditCurrent');
     const btnDelete = document.getElementById('btnDeleteCurrent');
+    const btnUpload = document.getElementById('btnUploadDoc');
+    const dropzone = document.getElementById('readerDropzone');
     const selRole = document.getElementById('selRoleOverride');
     const activeUser = getActiveUser();
 
     if (selRole) selRole.value = currentRole;
 
+    const isAdmin = currentRole === 'Admin';
+    const isEditor = currentRole === 'Editor';
+    const isViewer = currentRole === 'Viewer';
+
     if (badge) {
       badge.className = 'role-pill';
+      badge.style.cursor = 'pointer';
       const displayName = activeUser ? activeUser.fullName : 'Trương Duy Ngữ';
-      const userSuffix = githubUsername ? ' (@' + githubUsername + ')' : '';
-      if (currentRole === 'Admin') {
+      const userSuffix = (isAdmin && githubUsername) ? ' (@' + githubUsername + ')' : '';
+      if (isAdmin) {
         badge.classList.add('role-admin');
         badge.textContent = '👑 ' + displayName + ' (Admin)' + userSuffix;
-      } else if (currentRole === 'Editor') {
+        badge.title = 'Tài khoản Quản trị cấp cao (Admin) - Bấm để mở Quản lý / Chuyển tài khoản';
+      } else if (isEditor) {
         badge.classList.add('role-editor');
-        badge.textContent = '✏️ ' + displayName + ' (Editor)' + userSuffix;
+        badge.textContent = '✏️ ' + displayName + ' (Editor)';
+        badge.title = 'Tài khoản Kỹ sư Website (Editor: Thao tác Web, khóa GitHub & Import/Export) - Bấm để chuyển tài khoản';
       } else {
         badge.classList.add('role-viewer');
-        badge.textContent = '👁️ ' + displayName + ' (Viewer)' + userSuffix;
+        badge.textContent = '👁️ ' + displayName + ' (Viewer)';
+        badge.title = 'Tài khoản Tra cứu (Viewer: Chỉ đọc) - Bấm để chuyển tài khoản';
       }
     }
 
-    // Show/hide action buttons according to RBAC role
-    if (btnNew) btnNew.style.display = canCreateOrEdit() ? 'inline-flex' : 'none';
-    if (lblImport) lblImport.style.display = canDeleteOrImport() ? 'inline-flex' : 'none';
-    if (btnEdit) btnEdit.style.display = canCreateOrEdit() ? 'inline-flex' : 'none';
-    if (btnDelete) btnDelete.style.display = canDeleteOrImport() ? 'inline-flex' : 'none';
+    // 1. Thao tác trên Website: Admin và Editor đều được phép (Tạo/Sửa bài viết & Upload tài liệu)
+    if (btnNew) btnNew.style.display = (isAdmin || isEditor) ? 'inline-flex' : 'none';
+    if (btnEdit) btnEdit.style.display = (isAdmin || isEditor) ? 'inline-flex' : 'none';
+    if (btnUpload) btnUpload.style.display = (isAdmin || isEditor) ? 'inline-flex' : 'none';
+    if (dropzone) dropzone.style.display = (isAdmin || isEditor) ? 'block' : 'none';
+
+    // 2. Quyền can thiệp Hệ thống / GitHub / Dữ liệu file: CHỈ DÀNH CHO ADMIN
+    // - Editor KHÔNG được can thiệp vào GitHub (Ẩn nút GitHub Sync)
+    if (btnGh) btnGh.style.display = isAdmin ? 'inline-flex' : 'none';
+    // - Editor KHÔNG thấy mục Xuất JSON
+    if (btnExport) btnExport.style.display = isAdmin ? 'inline-flex' : 'none';
+    // - Editor KHÔNG thấy mục Nhập JSON
+    if (lblImport) lblImport.style.display = isAdmin ? 'inline-flex' : 'none';
+    // - Editor KHÔNG được quản lý user (Ẩn nút Quản lý User trên topbar)
+    if (btnUserMgr) btnUserMgr.style.display = isAdmin ? 'inline-flex' : 'none';
+    // - Editor KHÔNG được xóa bài viết
+    if (btnDelete) btnDelete.style.display = isAdmin ? 'inline-flex' : 'none';
 
     // Strict Private Auth Gate enforcement
     const token = sessionStorage.getItem(GH_TOKEN_SESSION_KEY);
     const gateBanner = document.getElementById('authGateBanner');
     const workspace = document.getElementById('protectedWorkspace');
-    if (githubConfig.strictGate && !token && (!activeUser || activeUser.role === 'Viewer')) {
+    if (githubConfig.strictGate && !token && isViewer) {
       if (gateBanner) gateBanner.classList.add('active');
       if (workspace) workspace.style.display = 'none';
     } else {
@@ -1186,12 +1215,16 @@
     const modal = document.getElementById('repoModal');
     if (!modal) return;
     renderRepoGroupsTree();
+    modal.classList.add('open');
     modal.classList.add('active');
   }
 
   function closeRepoCenterModal() {
     const modal = document.getElementById('repoModal');
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+      modal.classList.remove('open');
+      modal.classList.remove('active');
+    }
   }
 
   function renderRepoGroupsTree() {
@@ -1698,11 +1731,24 @@
     const btnGateUser = document.getElementById('btnGateUserLogin');
     if (btnGateUser) btnGateUser.addEventListener('click', openUserModal);
 
+    const roleBadge = document.getElementById('currentRoleBadge');
+    if (roleBadge) roleBadge.addEventListener('click', openUserModal);
+
     const btnCloseUser = document.getElementById('btnCloseUserModal');
     if (btnCloseUser) btnCloseUser.addEventListener('click', closeUserModal);
 
     const userForm = document.getElementById('createUserForm');
     if (userForm) userForm.addEventListener('submit', handleCreateUserSubmit);
+
+    // Modal Backdrop click to close when clicking outside dialog
+    document.querySelectorAll('.modal-backdrop').forEach(function (backdrop) {
+      backdrop.addEventListener('click', function (e) {
+        if (e.target === backdrop) {
+          backdrop.classList.remove('open');
+          backdrop.classList.remove('active');
+        }
+      });
+    });
 
     // Handover Document Repository Center bindings
     const btnRepo = document.getElementById('btnRepoCenter');
