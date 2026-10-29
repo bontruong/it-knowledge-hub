@@ -971,4 +971,133 @@ textarea.code-input {
   flex-wrap: wrap;
 }
 
+/* Document Upload & Handover Storage Center */
+.upload-dropzone {
+  border: 2px dashed var(--accent-primary);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.upload-dropzone-icon {
+  font-size: 2rem;
+  margin-bottom: 6px;
+}
+
+.upload-dropzone-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.upload-dropzone-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.attachments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.attachment-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s;
+}
+
+.attachment-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.attachment-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.attachment-info {
+  flex-grow: 1;
+  min-width: 0;
+}
+
+.attachment-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachment-meta {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.attachment-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.repo-folder-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.repo-folder-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.repo-folder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.repo-folder-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.repo-folder-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+
 
