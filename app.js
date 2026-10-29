@@ -1,11 +1,56 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'IT_KB_HUB_ARTICLES_V1';
+  const STORAGE_KEY = 'NDS_IT_KB_HUB_ARTICLES_V2';
   const THEME_KEY = 'IT_KB_HUB_THEME_V1';
   const RBAC_ROLE_KEY = 'IT_KB_HUB_ROLE_V1';
   const GH_CONFIG_KEY = 'IT_KB_HUB_GH_CONFIG_V1';
   const GH_TOKEN_SESSION_KEY = 'IT_KB_HUB_GH_PAT_SESSION';
+  const USERS_STORAGE_KEY = 'NDS_IT_KB_USERS_V1';
+  const CURRENT_USER_KEY = 'NDS_IT_KB_ACTIVE_USER_V1';
+
+  const DEFAULT_USERS = [
+    {
+      id: 'USR-001',
+      fullName: 'Trương Duy Ngữ',
+      email: 'ngu.truong@ndsvn.vn',
+      dept: 'IT Infrastructure & Operations',
+      role: 'Admin',
+      github: 'bontruong',
+      status: 'Active',
+      createdAt: '2026-10-26'
+    },
+    {
+      id: 'USR-002',
+      fullName: 'Phan Hoài Minh',
+      email: 'minh.phan@ndsvn.vn',
+      dept: 'Senior IT Trainer',
+      role: 'Admin',
+      github: '',
+      status: 'Active',
+      createdAt: '2026-10-20'
+    },
+    {
+      id: 'USR-003',
+      fullName: 'Kỹ Sư Vận Hành Hệ Thống',
+      email: 'ops.engineer@ndsvn.vn',
+      dept: 'DevOps & System On-call',
+      role: 'Editor',
+      github: '',
+      status: 'Active',
+      createdAt: '2026-10-27'
+    },
+    {
+      id: 'USR-004',
+      fullName: 'Nhân Sự Nội Bộ NDS',
+      email: 'staff.nds@ndsvn.vn',
+      dept: 'NDS General Staff',
+      role: 'Viewer',
+      github: '',
+      status: 'Active',
+      createdAt: '2026-10-28'
+    }
+  ];
 
   const SYSTEM_CATEGORIES = [
     { id: 'ALL', name: 'Tất cả hệ thống', icon: '🌐' },
@@ -257,6 +302,172 @@
     }, 3400);
   }
 
+  // User Management State & Helpers
+  function loadUsers() {
+    try {
+      const raw = localStorage.getItem(USERS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
+    return DEFAULT_USERS;
+  }
+
+  function saveUsers(userList) {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(userList));
+  }
+
+  function getActiveUser() {
+    try {
+      const raw = localStorage.getItem(CURRENT_USER_KEY);
+      if (raw) {
+        const u = JSON.parse(raw);
+        if (u && u.email) return u;
+      }
+    } catch (_) {}
+    const users = loadUsers();
+    return users[0] || DEFAULT_USERS[0];
+  }
+
+  function setActiveUser(user) {
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    currentRole = user.role;
+    localStorage.setItem(RBAC_ROLE_KEY, currentRole);
+    applyRbacUiPolicy();
+  }
+
+  function renderUserDirectoryTable() {
+    const tbody = document.getElementById('userTableBody');
+    if (!tbody) return;
+    const users = loadUsers();
+    const activeUser = getActiveUser();
+
+    tbody.innerHTML = '';
+    users.forEach(function (u) {
+      const tr = document.createElement('tr');
+      const isCurrent = activeUser && activeUser.email.toLowerCase() === u.email.toLowerCase();
+
+      let roleBadgeClass = 'role-viewer';
+      let roleIcon = '👁️';
+      if (u.role === 'Admin') { roleBadgeClass = 'role-admin'; roleIcon = '👑'; }
+      else if (u.role === 'Editor') { roleBadgeClass = 'role-editor'; roleIcon = '✏️'; }
+
+      const statusBadge = u.status === 'Active'
+        ? '<span class="badge-status-active">Hoạt động</span>'
+        : '<span class="badge-status-locked">Đã khóa</span>';
+
+      const actionsHtml = isCurrent
+        ? '<span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">✓ Đang dùng</span>'
+        : `<button type="button" class="btn btn-sm btn-primary" data-act="switch" data-email="${escapeHtml(u.email)}">🔄 Chọn</button>` +
+          (canDeleteOrImport()
+            ? ` <button type="button" class="btn btn-sm" data-act="toggle-lock" data-email="${escapeHtml(u.email)}">${u.status === 'Active' ? '🔒 Khóa' : '🔓 Mở'}</button>` +
+              ` <button type="button" class="btn btn-sm" data-act="delete" data-email="${escapeHtml(u.email)}" style="color:var(--sev-p1-text);" title="Xóa tài khoản">🗑️</button>`
+            : '');
+
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(u.fullName)}</strong>${isCurrent ? ' <span style="color:var(--accent-primary); font-size:0.75rem;">(Hiện hành)</span>' : ''}</td>
+        <td><code>${escapeHtml(u.email)}</code></td>
+        <td>${escapeHtml(u.dept || 'NDS')}</td>
+        <td><span class="role-pill ${roleBadgeClass}">${roleIcon} ${escapeHtml(u.role)}</span></td>
+        <td>${u.github ? `<a href="https://github.com/${encodeURIComponent(u.github)}" target="_blank" rel="noopener">@${escapeHtml(u.github)}</a>` : '<span style="color:var(--text-muted);">-</span>'}</td>
+        <td>${statusBadge}</td>
+        <td><div class="user-actions-cell">${actionsHtml}</div></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('button[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const act = btn.getAttribute('data-act');
+        const email = btn.getAttribute('data-email');
+        const allUsers = loadUsers();
+        const target = allUsers.find(function (x) { return x.email.toLowerCase() === email.toLowerCase(); });
+        if (!target) return;
+
+        if (act === 'switch') {
+          if (target.status !== 'Active') {
+            showToast('⚠️ Tài khoản này đang bị khóa, không thể đăng nhập!');
+            return;
+          }
+          setActiveUser(target);
+          renderUserDirectoryTable();
+          showToast(`✅ Đã chuyển sang tài khoản: ${target.fullName} (${target.role})`);
+        } else if (act === 'toggle-lock') {
+          target.status = target.status === 'Active' ? 'Locked' : 'Active';
+          saveUsers(allUsers);
+          renderUserDirectoryTable();
+          showToast(`🔒 Đã ${target.status === 'Active' ? 'mở khóa' : 'khóa'} tài khoản ${target.fullName}`);
+        } else if (act === 'delete') {
+          if (!confirm(`Bạn có chắc muốn xóa tài khoản ${target.fullName}?`)) return;
+          const filtered = allUsers.filter(function (x) { return x.email.toLowerCase() !== email.toLowerCase(); });
+          saveUsers(filtered);
+          renderUserDirectoryTable();
+          showToast(`🗑️ Đã xóa tài khoản ${target.fullName}`);
+        }
+      });
+    });
+  }
+
+  function openUserModal() {
+    const modal = document.getElementById('userModal');
+    if (!modal) return;
+    renderUserDirectoryTable();
+    const createSec = document.getElementById('createUserSection');
+    if (createSec) {
+      createSec.style.display = canDeleteOrImport() ? 'block' : 'none';
+    }
+    modal.classList.add('active');
+  }
+
+  function closeUserModal() {
+    const modal = document.getElementById('userModal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function handleCreateUserSubmit(e) {
+    e.preventDefault();
+    if (!canDeleteOrImport()) {
+      showToast('🛑 Từ chối truy cập: Chỉ Admin mới có quyền tạo User mới!');
+      return;
+    }
+    const fullName = document.getElementById('usrFullName').value.trim();
+    const email = document.getElementById('usrEmail').value.trim();
+    const dept = document.getElementById('usrDept').value.trim();
+    const role = document.getElementById('usrRole').value;
+    const passcode = document.getElementById('usrPasscode').value;
+    const github = document.getElementById('usrGitHub').value.trim();
+
+    if (!fullName || !email) {
+      showToast('⚠️ Vui lòng điền đầy đủ Họ tên và Email/Username!');
+      return;
+    }
+
+    const allUsers = loadUsers();
+    if (allUsers.some(function (u) { return u.email.toLowerCase() === email.toLowerCase(); })) {
+      showToast('⚠️ Email/Username này đã tồn tại trong hệ thống!');
+      return;
+    }
+
+    const newUser = {
+      id: 'USR-' + String(allUsers.length + 1).padStart(3, '0'),
+      fullName: fullName,
+      email: email,
+      dept: dept || 'NDS',
+      role: role,
+      github: github,
+      status: 'Active',
+      createdAt: new Date().toISOString().slice(0, 10)
+    };
+
+    allUsers.push(newUser);
+    saveUsers(allUsers);
+    renderUserDirectoryTable();
+    document.getElementById('createUserForm').reset();
+    showToast(`✅ Đã tạo tài khoản thành công cho: ${fullName} (${role})`);
+  }
+
   // RBAC Permission Helpers
   function canCreateOrEdit() {
     return currentRole === 'Admin' || currentRole === 'Editor';
@@ -273,20 +484,24 @@
     const btnEdit = document.getElementById('btnEditCurrent');
     const btnDelete = document.getElementById('btnDeleteCurrent');
     const selRole = document.getElementById('selRoleOverride');
+    const activeUser = getActiveUser();
 
     if (selRole) selRole.value = currentRole;
 
-    badge.className = 'role-pill';
-    const userSuffix = githubUsername ? ' (@' + githubUsername + ')' : '';
-    if (currentRole === 'Admin') {
-      badge.classList.add('role-admin');
-      badge.textContent = '👑 Quyền: Admin' + userSuffix;
-    } else if (currentRole === 'Editor') {
-      badge.classList.add('role-editor');
-      badge.textContent = '✏️ Quyền: Editor' + userSuffix;
-    } else {
-      badge.classList.add('role-viewer');
-      badge.textContent = '👁️ Quyền: Viewer' + userSuffix;
+    if (badge) {
+      badge.className = 'role-pill';
+      const displayName = activeUser ? activeUser.fullName : 'Trương Duy Ngữ';
+      const userSuffix = githubUsername ? ' (@' + githubUsername + ')' : '';
+      if (currentRole === 'Admin') {
+        badge.classList.add('role-admin');
+        badge.textContent = '👑 ' + displayName + ' (Admin)' + userSuffix;
+      } else if (currentRole === 'Editor') {
+        badge.classList.add('role-editor');
+        badge.textContent = '✏️ ' + displayName + ' (Editor)' + userSuffix;
+      } else {
+        badge.classList.add('role-viewer');
+        badge.textContent = '👁️ ' + displayName + ' (Viewer)' + userSuffix;
+      }
     }
 
     // Show/hide action buttons according to RBAC role
@@ -299,12 +514,12 @@
     const token = sessionStorage.getItem(GH_TOKEN_SESSION_KEY);
     const gateBanner = document.getElementById('authGateBanner');
     const workspace = document.getElementById('protectedWorkspace');
-    if (githubConfig.strictGate && !token) {
-      gateBanner.classList.add('active');
-      workspace.style.display = 'none';
+    if (githubConfig.strictGate && !token && (!activeUser || activeUser.role === 'Viewer')) {
+      if (gateBanner) gateBanner.classList.add('active');
+      if (workspace) workspace.style.display = 'none';
     } else {
-      gateBanner.classList.remove('active');
-      workspace.style.display = 'block';
+      if (gateBanner) gateBanner.classList.remove('active');
+      if (workspace) workspace.style.display = 'block';
     }
   }
 
@@ -512,11 +727,16 @@
         const seedRes = await fetch('./data/kb-seed.json', { cache: 'no-store' });
         if (seedRes.ok) {
           const seedData = await seedRes.json();
-          if (Array.isArray(seedData) && seedData.length > 0 && !localStorage.getItem(STORAGE_KEY)) {
-            articles = seedData;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
-            renderAll();
-            return;
+          if (Array.isArray(seedData) && seedData.length > 0) {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            let savedCount = 0;
+            try { savedCount = saved ? JSON.parse(saved).length : 0; } catch (_) {}
+            if (savedCount < seedData.length) {
+              articles = seedData;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
+              renderAll();
+              return;
+            }
           }
         }
       } catch (_) {
@@ -529,7 +749,7 @@
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed) && parsed.length >= 6) {
           articles = parsed;
           renderAll();
           return;
@@ -1277,6 +1497,19 @@
       openEditorModal(null);
     });
 
+    // User Management Modal bindings
+    const btnUserMgr = document.getElementById('btnUserManager');
+    if (btnUserMgr) btnUserMgr.addEventListener('click', openUserModal);
+
+    const btnGateUser = document.getElementById('btnGateUserLogin');
+    if (btnGateUser) btnGateUser.addEventListener('click', openUserModal);
+
+    const btnCloseUser = document.getElementById('btnCloseUserModal');
+    if (btnCloseUser) btnCloseUser.addEventListener('click', closeUserModal);
+
+    const userForm = document.getElementById('createUserForm');
+    if (userForm) userForm.addEventListener('submit', handleCreateUserSubmit);
+
     document.getElementById('btnGitHubAuth').addEventListener('click', openGitHubModal);
     document.getElementById('btnGateLogin').addEventListener('click', openGitHubModal);
     document.getElementById('btnCloseGitHubModal').addEventListener('click', closeGitHubModal);
@@ -1395,6 +1628,7 @@
         closeReaderModal();
         closeEditorModal();
         closeGitHubModal();
+        closeUserModal();
       }
     });
   }
