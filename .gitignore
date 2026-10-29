@@ -1,0 +1,6 @@
+# Local runtime & temporary files
+data/kb-articles.json
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
