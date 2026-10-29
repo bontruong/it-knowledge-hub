@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT &amp; Engineering Knowledge Hub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Chuyển tới nội dung chính</a>
+
+  <!-- Top Navigation & Global Search -->
+  <header class="topbar" role="banner">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">KB</div>
+      <div>
+        <div class="brand-title">IT Engineering Knowledge Hub</div>
+        <div class="brand-subtitle">Runbooks • Troubleshooting • SOP • System Architecture</div>
+      </div>
+    </div>
+
+    <div class="search-wrapper" role="search">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input
+        type="search"
+        id="searchInput"
+        class="search-input"
+        placeholder="Tìm kiếm mã lỗi, lệnh CLI, hệ thống, hoặc tên Runbook..."
+        aria-label="Tìm kiếm bài viết Knowledge Base"
+      />
+      <span class="search-kbd" aria-hidden="true">Ctrl + K</span>
+    </div>
+
+    <div class="topbar-actions">
+      <span id="currentRoleBadge" class="role-pill role-admin" title="Quyền truy cập hiện tại (RBAC)">
+        👑 Quyền: Admin
+      </span>
+      <button type="button" id="btnGitHubAuth" class="btn" aria-label="Cấu hình đăng nhập GitHub và Phân quyền RBAC">
+        🔐 Phân quyền &amp; GitHub Sync
+      </button>
+      <button type="button" id="btnNewArticle" class="btn btn-primary" aria-label="Tạo bài viết mới">
+        ➕ Tạo bài viết KB
+      </button>
+      <button type="button" id="btnExportJson" class="btn" title="Xuất toàn bộ dữ liệu KB ra file JSON">
+        ⬇️ Xuất JSON
+      </button>
+      <label for="inputImportJson" id="lblImportJson" class="btn" title="Nhập dữ liệu KB từ file JSON" style="margin:0;">
+        ⬆️ Nhập JSON
+      </label>
+      <input type="file" id="inputImportJson" accept=".json" style="display:none;" aria-label="Nhập file JSON" />
+      <button type="button" id="btnThemeToggle" class="btn" aria-label="Đổi giao diện Sáng/Tối">
+        🌓 Giao diện
+      </button>
+    </div>
+  </header>
+
+  <main id="main-content" class="container" role="main">
+    <!-- Strict Private Auth Gate Banner (Shown when Private Gate is enabled & user not authenticated) -->
+    <section id="authGateBanner" class="auth-gate-banner" aria-live="polite">
+      <h2 style="font-size: 1.4rem; margin-bottom: 8px;">🔒 Cổng Tri Thức Nội Bộ Yêu Cầu Xác Thực GitHub</h2>
+      <p style="color: var(--text-secondary); max-width: 640px; margin: 0 auto 18px auto;">
+        Trang IT Knowledge Hub đang bật chế độ <strong>Strict Private Repository Gate</strong>. Vui lòng đăng nhập bằng GitHub Personal Access Token để hệ thống kiểm tra quyền truy cập (<code>Admin</code> / <code>Editor</code> / <code>Viewer</code>) trên Repository và tải dữ liệu.
+      </p>
+      <button type="button" id="btnGateLogin" class="btn btn-primary">🔑 Đăng nhập với GitHub Token</button>
+    </section>
+
+    <div id="protectedWorkspace">
+    <!-- Section 1: Hero & Real-time Telemetry Strip -->
+    <section class="hero-banner" aria-labelledby="hero-heading">
+      <div class="hero-content">
+        <h1 id="hero-heading">Cổng Tri Thức Kỹ Thuật &amp; Vận Hành Hệ Thống (IT KB)</h1>
+        <p>
+          Tra cứu tức thời kịch bản ứng cứu sự cố (Incident Runbooks), hướng dẫn bắt bệnh (Troubleshooting),
+          quy trình chuẩn (SOP) và sơ đồ kiến trúc. Mọi lệnh CLI đều có nút sao chép 1 chạm và kiểm soát hạn rà soát định kỳ.
+        </p>
+      </div>
+      <div class="stats-strip" role="region" aria-label="Thống kê bài viết">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Tổng bài viết</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statP1" style="color: var(--sev-p1-text);">0</div>
+          <div class="stat-label">P1 Runbooks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statVerified" style="color: var(--status-verified-text);">0</div>
+          <div class="stat-label">Đã xác minh</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statReview" style="color: var(--status-review-text);">0</div>
+          <div class="stat-label">Cần rà soát</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: System Categories Grid -->
+    <section aria-labelledby="categories-heading">
+      <div class="section-header">
+        <h2 id="categories-heading" class="section-title">🗂️ Danh Mục Hệ Thống &amp; Hạ Tầng</h2>
+        <span id="syncStatusIndicator" style="font-size: 0.78rem; color: var(--text-muted);">
+          💾 Lưu trữ: LocalStorage + JSON Sync
+        </span>
+      </div>
+      <div id="categoryGrid" class="category-grid" role="tablist" aria-label="Lọc theo hệ thống"></div>
+    </section>
+
+    <!-- Section 3: Multi-Facet Filter Bar -->
+    <section class="filter-bar" aria-label="Bộ lọc chuyên sâu">
+      <div class="filter-group">
+        <label for="filterDocType" class="form-label" style="margin:0;">Loại tài liệu:</label>
+        <select id="filterDocType" class="filter-select">
+          <option value="ALL">Tất cả loại bài</option>
+          <option value="Runbook">🚨 Incident Runbook</option>
+          <option value="Troubleshooting">🛠️ Troubleshooting Guide</option>
+          <option value="SOP">📋 Quy trình chuẩn (SOP)</option>
+          <option value="Architecture">🏗️ Kiến trúc hệ thống</option>
+          <option value="Postmortem">🔍 Báo cáo Postmortem</option>
+        </select>
+
+        <label for="filterSeverity" class="form-label" style="margin:0;">Mức độ ưu tiên:</label>
+        <select id="filterSeverity" class="filter-select">
+          <option value="ALL">Mọi mức độ</option>
+          <option value="P1 - Critical">P1 - Critical</option>
+          <option value="P2 - High">P2 - High</option>
+          <option value="P3 - Normal">P3 - Normal</option>
+        </select>
+
+        <label for="filterStatus" class="form-label" style="margin:0;">Trạng thái:</label>
+        <select id="filterStatus" class="filter-select">
+          <option value="ALL">Mọi trạng thái</option>
+          <option value="Verified">Verified (Đã xác minh)</option>
+          <option value="Needs Review">Needs Review (Cần rà soát)</option>
+          <option value="Draft">Draft (Bản nháp)</option>
+          <option value="Deprecated">Deprecated (Lỗi thời)</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="sortOrder" class="form-label" style="margin:0;">Sắp xếp:</label>
+        <select id="sortOrder" class="filter-select">
+          <option value="severity">Ưu tiên P1 lên đầu</option>
+          <option value="updated">Mới cập nhật nhất</option>
+          <option value="title">Theo tên (A-Z)</option>
+        </select>
+        <button type="button" id="btnResetFilters" class="btn">Đặt lại bộ lọc</button>
+      </div>
+    </section>
+
+    <!-- Section 4: Main 2-Column Workspace -->
+    <div class="workspace-grid">
+      <!-- Left Column (2/3): Filtered Articles Feed -->
+      <section aria-labelledby="feed-heading">
+        <div class="section-header">
+          <h2 id="feed-heading" class="section-title">📚 Danh Sách Tài Liệu Kỹ Thuật</h2>
+          <span id="resultCountLabel" style="font-size: 0.84rem; color: var(--text-muted);">0 bài viết</span>
+        </div>
+        <div id="articlesContainer" class="articles-list" aria-live="polite"></div>
+      </section>
+
+      <!-- Right Column (1/3): P1 Runbooks, FAQ Accordion & SME Directory -->
+      <aside class="sidebar-stack" aria-label="Thông tin hỗ trợ nhanh">
+        <!-- Widget 1: Critical P1 Runbooks -->
+        <div class="widget-card">
+          <h3 class="widget-title">🚨 P1 Critical Runbooks (Truy cập nhanh)</h3>
+          <ul id="p1QuickList" class="p1-list"></ul>
+        </div>
+
+        <!-- Widget 2: Collapsible IT FAQ -->
+        <div class="widget-card">
+          <h3 class="widget-title">❓ Câu Hỏi Thường Gặp (IT FAQ)</h3>
+          <div id="faqContainer">
+            <details class="faq-item">
+              <summary class="faq-question">1. Làm sao để xin cấp quyền VPN / SSH vào môi trường Production?</summary>
+              <div class="faq-answer">
+                Tạo yêu cầu trên cổng ITSM kèm phê duyệt của Engineering Manager. Quyền truy cập Production được cấp theo cơ chế Just-In-Time (tối đa 4 giờ) qua nhóm AD <code>SG-Prod-Bastion-JIT</code>.
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary class="faq-question">2. Quy tắc bảo mật khi viết bài lên trang IT Knowledge Hub?</summary>
+              <div class="faq-answer">
+                Tuyệt đối <strong>KHÔNG</strong> dán mật khẩu, Private Key, Connection String hoặc Bearer Token thật vào bài viết. Hệ thống có bộ lọc tự động chặn các chuỗi chứa khóa bí mật (Zero Secret Leakage).
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary class="faq-question">3. Bao lâu cần rà soát (Review) lại một bài Runbook?</summary>
+              <div class="faq-answer">
+                Mọi Runbook mức P1/P2 phải được kiểm chứng định kỳ mỗi <strong>90–180 ngày</strong> hoặc ngay sau mỗi đợt nâng cấp hạ tầng. Các bài quá hạn sẽ tự động chuyển sang nhãn <code>Needs Review</code>.
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary class="faq-question">4. Làm sao để sao lưu hoặc chia sẻ trang Knowledge Base này cho đồng nghiệp?</summary>
+              <div class="faq-answer">
+                Nhấn nút <strong>⬇️ Xuất JSON</strong> trên thanh công cụ để tải toàn bộ cơ sở dữ liệu bài viết về máy, hoặc chạy <code>Start-KBServer.ps1</code> để chia sẻ qua mạng nội bộ LAN.
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Widget 3: On-Call & Subject Matter Experts (SMEs) -->
+        <div class="widget-card">
+          <h3 class="widget-title">👨‍💻 Đầu Mối Chuyên Gia (SMEs &amp; On-Call)</h3>
+          <div class="sme-list">
+            <div class="sme-person">
+              <div class="sme-avatar" aria-hidden="true">IN</div>
+              <div class="sme-info">
+                <span class="sme-name">Infra &amp; Cloud On-Call</span>
+                <span class="sme-role">Kubernetes, VMware, Azure/AWS • #oncall-infra</span>
+              </div>
+            </div>
+            <div class="sme-person">
+              <div class="sme-avatar" aria-hidden="true" style="background:#0284c7;">NW</div>
+              <div class="sme-info">
+                <span class="sme-name">Network &amp; Security SOC</span>
+                <span class="sme-role">Firewall, VPN, DNS, IAM • #sec-ops</span>
+              </div>
+            </div>
+            <div class="sme-person">
+              <div class="sme-avatar" aria-hidden="true" style="background:#10b981;">DB</div>
+              <div class="sme-info">
+                <span class="sme-name">Database Reliability (DBRE)</span>
+                <span class="sme-role">PostgreSQL, SQL Server, Redis • #dba-team</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+    </div>
+  </main>
+
+  <!-- Modal 3: GitHub Cloud Sync & RBAC Access Control -->
+  <div id="githubModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="githubModalHeading">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 id="githubModalHeading" style="font-size: 1.25rem;">🔐 Phân Quyền Truy Cập (RBAC) &amp; Đồng Bộ GitHub Cloud</h2>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">
+            Xác thực quyền trực tiếp từ GitHub Repository API (<code>permissions.admin / push / pull</code>) và lưu trữ đám mây
+          </div>
+        </div>
+        <button type="button" id="btnCloseGitHubModal" class="btn" aria-label="Đóng cửa sổ cấu hình GitHub">✕ Đóng</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="reader-section">
+          <h3>1. Bảng Ma Trận Phân Quyền (Role-Based Access Control Matrix)</h3>
+          <table class="rbac-matrix-table">
+            <thead>
+              <tr>
+                <th>Vai trò (Role)</th>
+                <th>Ánh xạ quyền trên GitHub Repo</th>
+                <th>Quyền trên trang IT Knowledge Hub</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>👑 Admin</strong></td>
+                <td><code>permissions.admin = true</code> (Owner / Maintain)</td>
+                <td>Toàn quyền: Xem, Tạo mới, Chỉnh sửa, <strong>Xóa bài</strong>, Nhập/Xuất JSON, Commit lên GitHub</td>
+              </tr>
+              <tr>
+                <td><strong>✏️ Editor</strong></td>
+                <td><code>permissions.push = true</code> (Write Collaborator)</td>
+                <td>Đóng góp: Xem, Tạo mới, Chỉnh sửa bài viết &amp; Commit lên GitHub (<strong>Khóa quyền Xóa bài</strong>)</td>
+              </tr>
+              <tr>
+                <td><strong>👁️ Viewer</strong></td>
+                <td><code>permissions.pull = true</code> (Read-Only Member)</td>
+                <td>Chỉ đọc: Tìm kiếm, Xem bài viết, Copy CLI &amp; Markdown (<strong>Khóa Tạo/Sửa/Xóa/Import</strong>)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="reader-section">
+          <h3>2. Chuyển Đổi Nhanh Vai Trò (Kiểm thử RBAC Local / Offline)</h3>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <label for="selRoleOverride" class="form-label" style="margin:0;">Vai trò hiện hành:</label>
+            <select id="selRoleOverride" class="form-control" style="max-width:260px;">
+              <option value="Admin">👑 Admin (Toàn quyền Quản trị)</option>
+              <option value="Editor">✏️ Editor (Kỹ sư Đóng góp - Không được xóa)</option>
+              <option value="Viewer">👁️ Viewer (Nhân sự Tra cứu - Chỉ đọc)</option>
+            </select>
+            <span id="ghConnectedUserLabel" style="font-size:0.82rem; color:var(--status-verified-text);">
+              Chế độ: Local / Chưa gắn Token GitHub
+            </span>
+          </div>
+        </div>
+
+        <form id="githubConfigForm" class="reader-section" style="margin-bottom:0;">
+          <h3>3. Kết Nối GitHub Private Repository (Lưu Trữ &amp; Xác Thực Thực Tế)</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="ghRepo" class="form-label">GitHub Repository (<code>owner/repo</code>) *</label>
+              <input type="text" id="ghRepo" class="form-control" required value="bontruong/it-knowledge-hub" placeholder="VD: bontruong/it-knowledge-hub" />
+            </div>
+            <div class="form-group">
+              <label for="ghBranch" class="form-label">Nhánh (Branch) *</label>
+              <input type="text" id="ghBranch" class="form-control" required value="main" />
+            </div>
+            <div class="form-group">
+              <label for="ghFilePath" class="form-label">Đường dẫn file dữ liệu JSON trong Repo *</label>
+              <input type="text" id="ghFilePath" class="form-control" required value="data/kb-seed.json" />
+            </div>
+            <div class="form-group">
+              <label for="ghStrictGate" class="form-label">Chế độ Khóa Truy Cập (Strict Private Gate)</label>
+              <select id="ghStrictGate" class="form-control">
+                <option value="false">Mở (Cho phép xem bản mẫu, yêu cầu quyền khi Sửa/Xóa)</option>
+                <option value="true">Khóa chặt (Bắt buộc đăng nhập GitHub Token mới hiển thị bài viết)</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label for="ghToken" class="form-label">
+                GitHub Personal Access Token (Fine-Grained PAT hoặc Classic Token) *
+              </label>
+              <input
+                type="password"
+                id="ghToken"
+                class="form-control"
+                autocomplete="off"
+                placeholder="github_pat_... hoặc ghp_... (Chỉ lưu trong SessionStorage trình duyệt, không bao giờ đẩy lên Git)"
+              />
+              <small style="color:var(--text-muted); font-size:0.76rem;">
+                💡 Bảo mật Tier 1: Token của bạn chỉ giữ trong bộ nhớ phiên trình duyệt (<code>sessionStorage</code>) để gọi trực tiếp tới <code>https://api.github.com</code>.
+              </small>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <div style="display:flex; gap:8px;">
+              <button type="submit" class="btn btn-primary">🔗 Xác thực &amp; Tải dữ liệu từ GitHub</button>
+              <button type="button" id="btnPushToGitHub" class="btn">☁️ Đẩy (Commit) dữ liệu hiện tại lên GitHub</button>
+            </div>
+            <button type="button" id="btnDisconnectGitHub" class="btn btn-danger">Ngắt kết nối Token</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 1: Article Reader View -->
+  <div id="readerModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="readerTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <div id="readerBadges" class="card-badges"></div>
+          <h2 id="readerTitle" style="font-size: 1.35rem; margin-top: 4px;">Chi tiết bài viết</h2>
+          <div id="readerMeta" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;"></div>
+        </div>
+        <button type="button" id="btnCloseReader" class="btn" aria-label="Đóng cửa sổ đọc bài">✕ Đóng</button>
+      </div>
+      <div id="readerBody" class="modal-body"></div>
+      <div class="modal-footer">
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="btnEditCurrent" class="btn">✏️ Chỉnh sửa bài viết</button>
+          <button type="button" id="btnCopyMarkdown" class="btn">📋 Copy dạng Markdown</button>
+        </div>
+        <button type="button" id="btnDeleteCurrent" class="btn btn-danger">🗑️ Xóa bài</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Create / Edit Article Form with 3 IT Templates -->
+  <div id="editorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="editorHeading">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 id="editorHeading" style="font-size: 1.25rem;">Tạo / Chỉnh sửa Bài Viết Kỹ Thuật</h2>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">
+            Chọn 1 trong 3 mẫu chuẩn bên dưới để điền sẵn khung nội dung kỹ thuật
+          </div>
+        </div>
+        <button type="button" id="btnCloseEditor" class="btn" aria-label="Đóng cửa sổ soạn thảo">✕ Đóng</button>
+      </div>
+
+      <form id="articleForm" class="modal-body">
+        <input type="hidden" id="editArticleId" />
+
+        <div class="template-bar">
+          <span style="font-size: 0.82rem; font-weight: 600;">⚡ Áp dụng mẫu nhanh:</span>
+          <button type="button" class="btn" data-template="Runbook">🚨 Mẫu 1: Incident Runbook</button>
+          <button type="button" class="btn" data-template="Troubleshooting">🛠️ Mẫu 2: Troubleshooting Guide</button>
+          <button type="button" class="btn" data-template="SOP">📋 Mẫu 3: Quy trình chuẩn (SOP)</button>
+        </div>
+
+        <div id="securityAlertBox" class="security-alert" role="alert"></div>
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="inpTitle" class="form-label">Tiêu đề bài viết / Mã sự cố *</label>
+            <input type="text" id="inpTitle" class="form-control" required placeholder="VD: [RUNBOOK] Xử lý sự cố nghẽn Connection Pool trên PostgreSQL Production" />
+          </div>
+
+          <div class="form-group">
+            <label for="inpDocType" class="form-label">Loại tài liệu (DocType) *</label>
+            <select id="inpDocType" class="form-control" required>
+              <option value="Runbook">Runbook</option>
+              <option value="Troubleshooting">Troubleshooting</option>
+              <option value="SOP">SOP</option>
+              <option value="Architecture">Architecture</option>
+              <option value="Postmortem">Postmortem</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="inpSystem" class="form-label">Hệ thống (System Category) *</label>
+            <select id="inpSystem" class="form-control" required>
+              <option value="Cloud & Infrastructure">Cloud &amp; Infrastructure</option>
+              <option value="Network & Firewall">Network &amp; Firewall</option>
+              <option value="Identity & Security (IAM)">Identity &amp; Security (IAM)</option>
+              <option value="Database & Storage">Database &amp; Storage</option>
+              <option value="CI/CD & DevOps">CI/CD &amp; DevOps</option>
+              <option value="Endpoint & Helpdesk">Endpoint &amp; Helpdesk</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="inpSeverity" class="form-label">Mức độ ưu tiên (Severity) *</label>
+            <select id="inpSeverity" class="form-control" required>
+              <option value="P1 - Critical">P1 - Critical</option>
+              <option value="P2 - High">P2 - High</option>
+              <option value="P3 - Normal">P3 - Normal</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="inpStatus" class="form-label">Trạng thái kiểm chứng (Status) *</label>
+            <select id="inpStatus" class="form-control" required>
+              <option value="Verified">Verified</option>
+              <option value="Needs Review">Needs Review</option>
+              <option value="Draft">Draft</option>
+              <option value="Deprecated">Deprecated</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="inpOwner" class="form-label">Kỹ sư / Nhóm phụ trách (Owner) *</label>
+            <input type="text" id="inpOwner" class="form-control" required placeholder="VD: DBRE Team / nguyen.van.a" />
+          </div>
+
+          <div class="form-group">
+            <label for="inpReviewDate" class="form-label">Ngày rà soát định kỳ (Review Date) *</label>
+            <input type="date" id="inpReviewDate" class="form-control" required />
+          </div>
+
+          <div class="form-group full">
+            <label for="inpSummary" class="form-label">Tóm tắt triệu chứng / Mục đích bài viết *</label>
+            <textarea id="inpSummary" class="form-control" required placeholder="Mô tả ngắn gọn triệu chứng lỗi, mã lỗi hoặc mục tiêu của quy trình..."></textarea>
+          </div>
+
+          <div class="form-group full">
+            <label for="inpSteps" class="form-label">Các bước chẩn đoán &amp; Thực thi chi tiết *</label>
+            <textarea id="inpSteps" class="form-control" required placeholder="Bước 1: Kiểm tra trạng thái dịch vụ...&#10;Bước 2: Phân tích log...&#10;Bước 3: Thực hiện khắc phục..."></textarea>
+          </div>
+
+          <div class="form-group full">
+            <label for="inpCommands" class="form-label">Lệnh CLI / Script mẫu (PowerShell, Bash, SQL)</label>
+            <textarea id="inpCommands" class="form-control code-input" placeholder="# Dán lệnh CLI hoặc script kiểm tra vào đây (Không chứa mật khẩu/secret thật)"></textarea>
+          </div>
+
+          <div class="form-group full">
+            <label for="inpRollback" class="form-label">Kịch bản Khôi phục (Rollback) &amp; Lưu ý An toàn</label>
+            <textarea id="inpRollback" class="form-control" placeholder="Nếu bước khắc phục không thành công, thực hiện lệnh rollback nào?"></textarea>
+          </div>
+
+          <div class="form-group full">
+            <label for="inpChecklist" class="form-label">Checklist Nghiệm thu (Mỗi dòng 1 tiêu chí)</label>
+            <textarea id="inpChecklist" class="form-control" placeholder="CPU/Memory trở về ngưỡng dưới 70%&#10;Alert trên Grafana đã tự động Resolved&#10;Đã cập nhật nguyên nhân vào ticket ITSM"></textarea>
+          </div>
+
+          <div class="form-group full">
+            <label for="inpTags" class="form-label">Từ khóa / Tags (Phân cách bằng dấu phẩy)</label>
+            <input type="text" id="inpTags" class="form-control" placeholder="VD: postgres, connection-pool, pgbouncer, outage" />
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 14px 0 0 0;">
+          <button type="button" id="btnCancelEditor" class="btn">Hủy</button>
+          <button type="submit" class="btn btn-primary">💾 Lưu bài viết KB</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toastNotification" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
