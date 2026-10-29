@@ -38,6 +38,9 @@
       <button type="button" id="btnUserManager" class="btn" aria-label="Quản lý User và Tạo tài khoản mới">
         👥 Quản lý User
       </button>
+      <button type="button" id="btnRepoCenter" class="btn" aria-label="Kho Lưu Trữ Tài Liệu Bàn Giao">
+        📁 Kho Tài Liệu
+      </button>
       <button type="button" id="btnGitHubAuth" class="btn" aria-label="Cấu hình đăng nhập GitHub và Phân quyền RBAC">
         🔐 GitHub Sync
       </button>
@@ -258,6 +261,22 @@
         <button type="button" id="btnCloseReader" class="btn" aria-label="Đóng cửa sổ đọc bài">✕ Đóng</button>
       </div>
       <div id="readerBody" class="modal-body"></div>
+      <!-- Section: Document Upload & Handover Files Area -->
+      <div class="reader-section" style="margin: 0 24px 18px 24px; padding: 16px; background: var(--bg-primary); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <h3 style="margin:0; font-size:1.05rem;">📁 Tài Liệu Bàn Giao Đính Kèm (<span id="readerAttachmentCount">0</span>)</h3>
+          <div style="display:flex; gap:8px;">
+            <button type="button" id="btnUploadDoc" class="btn btn-primary btn-sm">📤 Tải lên tài liệu</button>
+            <input type="file" id="readerFileInput" multiple style="display:none;" />
+          </div>
+        </div>
+        <div id="readerDropzone" class="upload-dropzone" style="margin-top:12px;">
+          <div class="upload-dropzone-icon">📤</div>
+          <div class="upload-dropzone-text">Kéo thả tài liệu vào đây hoặc bấm nút "Tải lên tài liệu"</div>
+          <div class="upload-dropzone-sub">Hỗ trợ .pdf, .docx, .xlsx, .pptx, .csv, .txt, .zip, .png, .jpg (Lưu trữ và sẵn sàng tải về)</div>
+        </div>
+        <div id="readerAttachmentsList" class="attachments-grid"></div>
+      </div>
       <div class="modal-footer">
         <div style="display:flex; gap:8px;">
           <button type="button" id="btnEditCurrent" class="btn">✏️ Chỉnh sửa bài viết</button>
@@ -581,6 +600,29 @@
             <button type="button" id="btnDisconnectGitHub" class="btn btn-danger">Ngắt kết nối Token</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Document Handover Storage Repository (7 Groups) -->
+  <div id="repoModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="repoModalHeading">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 id="repoModalHeading" style="font-size: 1.25rem;">📁 Kho Lưu Trữ Tài Liệu Bàn Giao IT NDS</h2>
+          <div style="font-size: 0.8rem; color: var(--text-muted);">
+            Chuẩn bị sẵn môi trường lưu trữ theo đúng 7 nhóm hạng mục của file <code>Plan_Training_BanGiao_NDS_IT.xlsx</code>
+          </div>
+        </div>
+        <button type="button" id="btnCloseRepoModal" class="btn" aria-label="Đóng kho tài liệu">✕ Đóng</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 16px; font-size: 0.84rem;">
+          <strong>📂 Thư mục lưu trữ vật lý trên máy trạm:</strong><br/>
+          <code>C:\Users\ngu.truong\it-knowledge-hub\tai-lieu-ban-giao\</code><br/>
+          <span style="color: var(--text-muted); font-size: 0.78rem;">Đã tạo sẵn 7 thư mục tương ứng theo các nhóm bàn giao. Bạn có thể kéo thả tài liệu trực tiếp vào đây hoặc tải lên qua trình duyệt bên dưới.</span>
+        </div>
+        <div id="repoGroupsContainer"></div>
       </div>
     </div>
   </div>
