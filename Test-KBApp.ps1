@@ -45,18 +45,39 @@ foreach ($item in $SeedJson) {
 }
 Assert-Test "All 15 articles have complete metadata & content fields" $AllPropsValid
 
-# 3. Accessibility & Security Guardrails Check
+# 3. Accessibility, Security & Document Handover Repository Check
 $Html = Get-Content -LiteralPath (Join-Path $RootDir 'index.html') -Raw -Encoding UTF8
 $Js   = Get-Content -LiteralPath (Join-Path $RootDir 'app.js') -Raw -Encoding UTF8
 
 Assert-Test "HTML includes WCAG Skip Link & ARIA landmarks" ($Html.Contains('class="skip-link"') -and $Html.Contains('role="search"') -and $Html.Contains('aria-modal="true"'))
 Assert-Test "HTML includes GitHub RBAC Modal & Role Badge" ($Html.Contains('id="githubModal"') -and $Html.Contains('id="currentRoleBadge"'))
 Assert-Test "HTML includes User Management Modal & User Button" ($Html.Contains('id="userModal"') -and $Html.Contains('id="btnUserManager"'))
+Assert-Test "HTML includes Document Upload Dropzone & Repo Modal" ($Html.Contains('id="readerDropzone"') -and $Html.Contains('id="repoModal"') -and $Html.Contains('id="btnRepoCenter"'))
 Assert-Test "JS implements escapeHtml XSS sanitization" ($Js.Contains('function escapeHtml('))
 Assert-Test "JS implements Tier 1 Zero Secret Leakage Guardrail" ($Js.Contains('function detectPlaintextSecrets('))
 Assert-Test "JS implements RBAC permission checks (Admin/Editor/Viewer)" ($Js.Contains('function canCreateOrEdit(') -and $Js.Contains('function canDeleteOrImport('))
 Assert-Test "JS implements User Management and Switch User" ($Js.Contains('function openUserModal(') -and $Js.Contains('function handleCreateUserSubmit('))
+Assert-Test "JS implements Document Upload & Attachment Download" ($Js.Contains('function processFilesUpload(') -and $Js.Contains('function downloadAttachment('))
+Assert-Test "JS implements 7 Handover Groups Repository Center" ($Js.Contains('function openRepoCenterModal(') -and $Js.Contains('function renderRepoGroupsTree('))
 Assert-Test "JS implements GitHub REST API v3 sync & commit" ($Js.Contains('function connectAndSyncFromGitHub(') -and $Js.Contains('function pushArticlesToGitHub('))
+
+# 4. Physical Storage Folder Verification
+$PhysicalRepoDir = Join-Path $RootDir 'tai-lieu-ban-giao'
+Assert-Test "Physical handover documents folder exists" (Test-Path -LiteralPath $PhysicalRepoDir)
+$ExpectedFolders = @(
+    '01_Helpdesk_BieuMau',
+    '02_UngDungNoiBo_Gapowork_Jira_Wiki_Bitbucket_Misa_Getfly',
+    '03_HaTang_ServerQTSC_ESXi_VMs_NetworkMeraki_Firewall',
+    '04_HeThongCloud_Azure_CMC_FPT_K3S',
+    '05_MicrosoftServices_M365_PartnerCenter_DevOps',
+    '06_UngDungKhachHang_BonbonShop_VisibilityPRO_DeliveryPRO',
+    '07_TenMien_AppStores_HopDongLicense_SNS'
+)
+$AllFoldersExist = $true
+foreach ($ef in $ExpectedFolders) {
+    if (-not (Test-Path -LiteralPath (Join-Path $PhysicalRepoDir $ef))) { $AllFoldersExist = $false }
+}
+Assert-Test "All 7 physical handover storage folders prepared" $AllFoldersExist
 
 # 4. E2E HTTP Server & REST API Test
 $TestPort = 18089
