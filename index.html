@@ -443,9 +443,9 @@
               <div class="form-group">
                 <label for="usrRole" class="form-label">Vai trò Phân quyền (RBAC Role) *</label>
                 <select id="usrRole" class="form-control" required>
-                  <option value="Viewer">👁️ Viewer (Chỉ xem &amp; copy lệnh CLI)</option>
-                  <option value="Editor">✏️ Editor (Được tạo &amp; sửa bài viết, không được xóa)</option>
-                  <option value="Admin">👑 Admin (Toàn quyền quản trị bài viết &amp; tạo User)</option>
+                  <option value="Viewer">👁️ Viewer (Chỉ xem &amp; tải tài liệu bàn giao)</option>
+                  <option value="Editor">✏️ Editor (Chỉ xử lý trên Website: Tạo/Sửa bài &amp; Upload tài liệu - Khóa can thiệp GitHub, Ẩn Xuất/Nhập JSON)</option>
+                  <option value="Admin">👑 Admin (Toàn quyền quản trị bài viết, Quản lý User, GitHub Sync, Xuất/Nhập JSON)</option>
                 </select>
               </div>
               <div class="form-group">
@@ -525,17 +525,17 @@
               <tr>
                 <td><strong>👑 Admin</strong></td>
                 <td><code>permissions.admin = true</code> (Owner / Maintain)</td>
-                <td>Toàn quyền: Xem, Tạo mới, Chỉnh sửa, <strong>Xóa bài</strong>, <strong>Tạo/Xóa User</strong>, Commit lên GitHub</td>
+                <td>Toàn quyền: Xem, Tạo mới, Chỉnh sửa, <strong>Xóa bài</strong>, <strong>Quản lý User</strong>, Commit GitHub, <strong>Xuất &amp; Nhập JSON</strong></td>
               </tr>
               <tr>
                 <td><strong>✏️ Editor</strong></td>
-                <td><code>permissions.push = true</code> (Write Collaborator)</td>
-                <td>Đóng góp: Xem, Tạo mới, Chỉnh sửa bài viết &amp; Commit lên GitHub (<strong>Khóa Xóa bài &amp; Tạo User</strong>)</td>
+                <td>Chỉ cấp quyền trên Website</td>
+                <td>Chỉ xử lý trên Website: Xem, Tạo mới, Chỉnh sửa bài viết, <strong>Upload tài liệu</strong> (<strong>Không can thiệp GitHub, Ẩn Xuất/Nhập JSON, Khóa Xóa bài &amp; Quản lý User</strong>)</td>
               </tr>
               <tr>
                 <td><strong>👁️ Viewer</strong></td>
-                <td><code>permissions.pull = true</code> (Read-Only Member)</td>
-                <td>Chỉ đọc: Tìm kiếm, Xem bài viết, Copy CLI &amp; Markdown (<strong>Khóa Tạo/Sửa/Xóa/Import</strong>)</td>
+                <td><code>permissions.pull = true</code> (Read-Only)</td>
+                <td>Chỉ đọc: Tìm kiếm, Xem bài viết, Tải tài liệu đính kèm (<strong>Khóa Tạo/Sửa/Xóa/Upload &amp; Ẩn GitHub/JSON</strong>)</td>
               </tr>
             </tbody>
           </table>
