@@ -1,13 +1,20 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'NDS_IT_KB_HUB_HANDOVER_V3';
+  const STORAGE_KEY = 'NDS_IT_KB_HUB_HANDOVER_V4';
   const THEME_KEY = 'IT_KB_HUB_THEME_V1';
   const RBAC_ROLE_KEY = 'IT_KB_HUB_ROLE_V1';
   const GH_CONFIG_KEY = 'IT_KB_HUB_GH_CONFIG_V1';
   const GH_TOKEN_SESSION_KEY = 'IT_KB_HUB_GH_PAT_SESSION';
   const USERS_STORAGE_KEY = 'NDS_IT_KB_USERS_V1';
   const CURRENT_USER_KEY = 'NDS_IT_KB_ACTIVE_USER_V1';
+
+  // Clean old cached versions
+  try {
+    localStorage.removeItem('NDS_IT_KB_HUB_HANDOVER_V1');
+    localStorage.removeItem('NDS_IT_KB_HUB_HANDOVER_V2');
+    localStorage.removeItem('NDS_IT_KB_HUB_HANDOVER_V3');
+  } catch (_) {}
 
   const DEFAULT_USERS = [
     {
@@ -24,8 +31,8 @@
       id: 'USR-002',
       fullName: 'Phan Hoài Minh',
       email: 'minh.phan@ndsvn.vn',
-      dept: 'Senior IT Trainer',
-      role: 'Admin',
+      dept: 'Người Bàn Giao IT',
+      role: 'Editor',
       github: '',
       status: 'Active',
       createdAt: '2026-10-20'
@@ -65,131 +72,274 @@
 
   const DEFAULT_ARTICLES = [
     {
-      id: 'KB-IT-001',
-      title: '[RUNBOOK] Xử lý sự cố cạn kiệt Connection Pool trên PostgreSQL Production',
-      docType: 'Runbook',
-      system: 'Database & Storage',
-      severity: 'P1 - Critical',
-      status: 'Verified',
-      owner: 'DBRE Team (dba-oncall)',
-      updatedAt: '2026-10-29',
-      reviewDate: '2027-04-29',
-      summary: "Ứng dụng trả lỗi 'FATAL: remaining connection slots are reserved for non-replication superuser connections' (SQLSTATE 53300). Latency API tăng vọt và request bị timeout.",
-      steps: "1. Kết nối vào cụm PostgreSQL Primary qua cổng quản trị dự phòng (Admin Port) hoặc PgBouncer console.\n2. Kiểm tra danh sách các tiến trình đang giữ kết nối ở trạng thái 'idle in transaction' quá 60 giây.\n3. Xác định microservice hoặc IP nguồn đang mở kết nối bất thường.\n4. Chạy lệnh ngắt các phiên bị treo quá hạn (không ngắt tiến trình replication/autovacuum).\n5. Nếu do spike lưu lượng hợp lệ, tăng tạm thời pool_size trên PgBouncer và scale-down số replica gây bão kết nối.",
-      commands: "-- 1. Thống kê số lượng kết nối theo trạng thái và ứng dụng\nSELECT application_name, state, count(*)\nFROM pg_stat_activity\nGROUP BY application_name, state\nORDER BY count(*) DESC;\n\n-- 2. Ngắt các phiên 'idle in transaction' treo trên 5 phút\nSELECT pg_terminate_backend(pid)\nFROM pg_stat_activity\nWHERE state = 'idle in transaction'\n  AND usename <> 'postgres'\n  AND state_change < now() - interval '5 minutes';",
-      rollback: 'Nếu việc ngắt kết nối làm một worker job bị lỗi lặp lại, hãy tạm dừng (pause) consumer queue tương ứng trên Kubernetes trước khi mở lại lưu lượng vào DB.',
-      checklist: [
-        'Số lượng active connections giảm xuống dưới 75% ngưỡng max_connections',
-        "Không còn phiên 'idle in transaction' nào kéo dài quá 60 giây",
-        'Tỷ lệ lỗi HTTP 5xx trên API Gateway về mức 0%',
-        'Đã lưu log pg_stat_activity phục vụ báo cáo Postmortem'
-      ],
-      tags: ['postgresql', 'pgbouncer', 'connection-pool', 'p1-outage', 'sqlstate-53300']
-    },
-    {
-      id: 'KB-IT-002',
-      title: '[RUNBOOK] Ứng cứu Pod CrashLoopBackOff & OOMKilled trên Kubernetes Cluster',
-      docType: 'Runbook',
-      system: 'Cloud & Infrastructure',
-      severity: 'P1 - Critical',
-      status: 'Verified',
-      owner: 'Platform Infra Team',
-      updatedAt: '2026-10-28',
-      reviewDate: '2027-03-15',
-      summary: 'Pod dịch vụ cốt lõi khởi động lại liên tục với trạng thái CrashLoopBackOff hoặc Exit Code 137 (OOMKilled) làm suy giảm năng lực chịu tải.',
-      steps: '1. Kiểm tra sự kiện (Events) và mã thoát (Exit Code) gần nhất của Pod.\n2. Nếu Exit Code = 137 (OOMKilled): Container vượt ngưỡng limits.memory. Kiểm tra biểu đồ bộ nhớ và tăng tạm thời memory limit hoặc rollback bản release vừa triển khai.\n3. Nếu Exit Code = 1 / 2: Đọc log của lần chạy trước (--previous) để tìm lỗi thiếu biến môi trường, ConfigMap hoặc lỗi kết nối phụ thuộc.\n4. Kiểm tra cấu hình livenessProbe (tránh đặt initialDelaySeconds quá ngắn khiến kubelet giết Pod khi đang khởi tạo).',
-      commands: '# 1. Kiểm tra trạng thái Pod và lý do kết thúc lần trước\nkubectl describe pod <pod-name> -n <namespace>\n\n# 2. Xem log của container vừa bị crash trước đó\nkubectl logs <pod-name> -n <namespace> --previous --tail=100\n\n# 3. Rollback khẩn cấp Deployment về phiên bản ổn định liền trước\nkubectl rollout undo deployment/<deployment-name> -n <namespace>\nkubectl rollout status deployment/<deployment-name> -n <namespace>',
-      rollback: "Sử dụng lệnh 'kubectl rollout undo' để quay về Revision ổn định trước đó trong vòng 60 giây nếu nguyên nhân đến từ bản build mới.",
-      checklist: [
-        'Tất cả các Pod trong Deployment đạt trạng thái Running (Ready 1/1)',
-        'Số lần Restart không tăng thêm trong 15 phút theo dõi',
-        'Đã kiểm tra chỉ số Memory Working Set so với ngưỡng limits.memory'
-      ],
-      tags: ['kubernetes', 'k8s', 'crashloopbackoff', 'oomkilled', 'exit-137']
-    },
-    {
-      id: 'KB-IT-003',
-      title: '[TROUBLESHOOTING] Xử lý lỗi mất phân giải DNS nội bộ & Split-Horizon VPN',
-      docType: 'Troubleshooting',
-      system: 'Network & Firewall',
-      severity: 'P2 - High',
-      status: 'Verified',
-      owner: 'Network Engineering',
-      updatedAt: '2026-10-25',
-      reviewDate: '2027-02-20',
-      summary: 'Người dùng kết nối VPN thành công nhưng không truy cập được các tên miền nội bộ (*.corp.internal) trong khi truy cập theo địa chỉ IP vẫn thông suốt.',
-      steps: '1. Xác minh máy trạm đã nhận đúng DNS Server nội bộ từ VPN Concentrator hay đang bị đè bởi DNS công cộng (8.8.8.8 / 1.1.1.1) hoặc trình duyệt bật DoH (DNS over HTTPS).\n2. Dùng lệnh Resolve-DnsName chỉ định trực tiếp IP của Internal DNS Server để tách biệt lỗi do đường mạng (UDP/TCP 53) hay lỗi cấu hình NRPT (Name Resolution Policy Table).\n3. Xóa cache DNS cục bộ và kiểm tra bảng định tuyến (Route Table) tới dải mạng DNS nội bộ.',
-      commands: '# 1. Kiểm tra cấu hình DNS trên từng card mạng và VPN adapter\nGet-DnsClientServerAddress | Format-Table InterfaceAlias, AddressFamily, ServerAddresses\n\n# 2. Kiểm tra phân giải tên miền nội bộ qua DNS Server nội bộ (VD: 10.10.1.53)\nResolve-DnsName -Name "git.corp.internal" -Server 10.10.1.53\n\n# 3. Kiểm tra chính sách NRPT và làm mới bộ đệm DNS\nGet-DnsClientNrptPolicy\nClear-DnsClientCache',
-      rollback: 'Nếu lỗi do bản cập nhật VPN Profile mới, khôi phục profile XML cũ trong thư mục cấu hình VPN Client và ngắt kết nối lại.',
-      checklist: [
-        'Lệnh Resolve-DnsName trả về đúng IP Private của dịch vụ nội bộ',
-        'Kết nối TCP 443 tới cổng dịch vụ nội bộ thành công',
-        'Không làm gián đoạn đường truyền Internet thông thường (Split-Tunnel)'
-      ],
-      tags: ['dns', 'vpn', 'split-tunnel', 'nrpt', 'network']
-    },
-    {
-      id: 'KB-IT-004',
-      title: '[SOP] Quy trình cấp phát & thu hồi quyền truy cập Just-In-Time (JIT) trên Active Directory / Entra ID',
+      id: 'KB-NDS-01',
+      title: 'Hỗ trợ người dùng nội bộ (40+ users) & Quản lý Biểu mẫu bàn giao MMTB',
       docType: 'SOP',
-      system: 'Identity & Security (IAM)',
+      system: 'Helpdesk',
       severity: 'P2 - High',
-      status: 'Verified',
-      owner: 'IAM & SecOps Team',
-      updatedAt: '2026-10-24',
-      reviewDate: '2027-04-24',
-      summary: 'Quy trình chuẩn để cấp quyền quản trị tạm thời (Least Privilege) cho kỹ sư vận hành và thu hồi tự động khi hết thời hạn công việc.',
-      steps: '1. Xác thực mã phiếu yêu cầu (Change/Incident Ticket ID) và người phê duyệt (Line Manager hoặc On-call Lead).\n2. Tuyệt đối KHÔNG thêm tài khoản cá nhân trực tiếp vào nhóm Domain Admins vĩnh viễn.\n3. Sử dụng tính năng Time-bound Group Membership (TTL) của Active Directory PAM hoặc Privileged Identity Management (PIM) với thời hạn tối đa 4 giờ.\n4. Ghi nhận log kiểm toán (Audit Log) kèm mã Ticket.',
-      commands: '# Thêm thành viên vào nhóm bảo mật AD với thời hạn tự động thu hồi sau 240 phút (4 giờ)\n$ttl = New-TimeSpan -Minutes 240\nAdd-ADGroupMember -Identity "SG-Tier1-Server-Maintenance" -Members "engineer.account" -MemberTimeToLive $ttl\n\n# Kiểm tra thời gian hiệu lực còn lại của các thành viên trong nhóm\nGet-ADGroup "SG-Tier1-Server-Maintenance" -Property member -ShowMemberTimeToLive',
-      rollback: "Để thu hồi quyền ngay lập tức trước thời hạn: chạy lệnh Remove-ADGroupMember -Identity 'SG-Tier1-Server-Maintenance' -Members 'engineer.account' -Confirm:$false",
-      checklist: [
-        'Tài khoản đã có thuộc tính TTL tự động hết hạn',
-        'Kỹ sư xác nhận đăng nhập thành công qua Bastion Host',
-        'Sự kiện thay đổi quyền (Event ID 4728 / 4732) đã được SIEM ghi nhận'
-      ],
-      tags: ['active-directory', 'iam', 'least-privilege', 'jit', 'security-sop']
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
     },
     {
-      id: 'KB-IT-005',
-      title: '[TROUBLESHOOTING] Xử lý lỗi đầy ổ đĩa & treo Runner trên hệ thống CI/CD Pipeline',
-      docType: 'Troubleshooting',
-      system: 'CI/CD & DevOps',
-      severity: 'P2 - High',
-      status: 'Needs Review',
-      owner: 'DevOps Automation Team',
-      updatedAt: '2026-09-10',
-      reviewDate: '2026-10-20',
-      summary: "Build job bị treo ở bước 'Preparing environment' hoặc báo lỗi 'no space left on device' do Docker build cache và dangling images tích tụ trên Self-hosted Runner.",
-      steps: '1. Kiểm tra dung lượng phân vùng đĩa và inode trên máy chủ CI/CD Runner.\n2. Kiểm tra dung lượng chiếm dụng của Docker (Images, Containers, Local Volumes, Build Cache).\n3. Thực thi dọn dẹp các image/cache không còn sử dụng quá 72 giờ.\n4. Kiểm tra và kích hoạt lại systemd timer cho tác vụ dọn dẹp tự động hàng đêm.',
-      commands: '# 1. Kiểm tra dung lượng ổ đĩa và chi tiết dung lượng Docker\ndf -h\ndocker system df\n\n# 2. Dọn dẹp an toàn các container đã dừng và build cache cũ hơn 72h\ndocker system prune -af --filter "until=72h"\ndocker builder prune -af --filter "until=72h"',
-      rollback: 'Không xóa các Docker Volume đang gắn với dịch vụ lưu trữ bền vững (không thêm cờ --volumes khi chưa kiểm tra).',
-      checklist: [
-        'Dung lượng trống trên phân vùng /var/lib/docker đạt trên 30%',
-        'Chạy thử nghiệm 1 Pipeline test thành công',
-        'Đã bật cronjob/systemd-timer dọn cache định kỳ'
-      ],
-      tags: ['cicd', 'docker', 'runner', 'disk-full', 'devops']
-    },
-    {
-      id: 'KB-IT-006',
-      title: '[SOP] Quy trình chuẩn bị máy trạm & khắc phục lỗi BitLocker Recovery cho nhân sự (IT Helpdesk)',
+      id: 'KB-NDS-02',
+      title: 'Nền tảng Giao tiếp Doanh nghiệp Gapowork',
       docType: 'SOP',
-      system: 'Endpoint & Helpdesk',
-      severity: 'P3 - Normal',
-      status: 'Verified',
-      owner: 'IT Service Desk',
-      updatedAt: '2026-10-27',
-      reviewDate: '2027-05-01',
-      summary: 'Hướng dẫn kiểm tra trạng thái mã hóa ổ đĩa BitLocker, tạm dừng bảo vệ khi cập nhật BIOS/Firmware và tra cứu khóa khôi phục an toàn.',
-      steps: '1. Trước khi cập nhật BIOS/UEFI hoặc thay đổi cấu hình phần cứng trên máy trạm Windows 11, bắt buộc tạm dừng (Suspend) BitLocker trong 1 lần khởi động lại để tránh bị hỏi Recovery Key.\n2. Nếu máy trạm đã rơi vào màn hình xanh BitLocker Recovery: Xác minh danh tính nhân sự qua cuộc gọi video/thẻ nhân viên trước khi tra cứu khóa 48 chữ số trên cổng quản trị Intune / AD.\n3. Sau khi vào lại Windows, kiểm tra trạng thái TPM 2.0 và kích hoạt lại các bộ bảo vệ (Protectors).',
-      commands: '# 1. Kiểm tra trạng thái mã hóa BitLocker hiện tại\nGet-BitLockerVolume -MountPoint "C:" | Select-Object MountPoint, VolumeStatus, ProtectionStatus, KeyProtector\n\n# 2. Tạm dừng bảo vệ BitLocker trong 1 lần Reboot để cập nhật BIOS\nSuspend-BitLocker -MountPoint "C:" -RebootCount 1\n\n# 3. Bật lại bảo vệ BitLocker ngay lập tức\nResume-BitLocker -MountPoint "C:"',
-      rollback: 'Nếu TPM báo lỗi sau khi nâng cấp BIOS, vào UEFI bật lại Security Chip / Intel PTT / AMD fTPM trước khi Resume-BitLocker.',
-      checklist: [
-        "ProtectionStatus hiển thị 'On' sau khi hoàn tất",
-        'Recovery Key đã được đồng bộ (Escrow) lên Entra ID / Active Directory',
-        'Đã đóng phiếu hỗ trợ người dùng'
-      ],
-      tags: ['bitlocker', 'windows-11', 'helpdesk', 'endpoint', 'tpm']
+      system: 'Hệ thống ứng dụng nội bộ',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-03',
+      title: 'Vận hành & Phân quyền Hệ thống Atlassian Jira',
+      docType: 'Runbook',
+      system: 'Hệ thống ứng dụng nội bộ',
+      severity: 'P1 - Critical',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-04',
+      title: 'Cơ sở Tri thức Atlassian Confluence Wiki',
+      docType: 'SOP',
+      system: 'Hệ thống ứng dụng nội bộ',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-05',
+      title: 'Hệ thống Mã nguồn Doanh nghiệp Atlassian Bitbucket',
+      docType: 'Runbook',
+      system: 'Hệ thống ứng dụng nội bộ',
+      severity: 'P1 - Critical',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-06',
+      title: 'Phần mềm Quản trị Misa (HRM & Finance) & Server Misa (10.86.81.12)',
+      docType: 'SOP',
+      system: 'Hệ thống ứng dụng nội bộ',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-07',
+      title: 'Quản trị Website Doanh nghiệp (ndsvn.vn) & Getfly CRM',
+      docType: 'SOP',
+      system: 'Hệ thống ứng dụng nội bộ',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-08',
+      title: 'Quản lý Máy in Văn phòng (10.86.6.200) & Máy chấm công (10.86.5.200)',
+      docType: 'SOP',
+      system: 'Hệ thống hạ tầng',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-09',
+      title: 'Hạ tầng Mạng VP (Router, Switch, Wifi Meraki, Camera, Firewall Fortigate)',
+      docType: 'Architecture',
+      system: 'Hệ thống hạ tầng',
+      severity: 'P1 - Critical',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-10',
+      title: 'Cụm Máy chủ Ảo hóa VMware vCenter / ESXi tại Data Center QTSC',
+      docType: 'Architecture',
+      system: 'Hệ thống hạ tầng',
+      severity: 'P1 - Critical',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-11',
+      title: 'Hệ sinh thái Đám mây AWS Cloud & Google Cloud Platform (GCP)',
+      docType: 'Architecture',
+      system: 'Hệ thống Cloud',
+      severity: 'P1 - Critical',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-12',
+      title: 'Dịch vụ Microsoft 365, Exchange Online & SharePoint Intranet',
+      docType: 'SOP',
+      system: 'Microsoft services',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-13',
+      title: 'Hạ tầng Vận hành Ứng dụng Khách hàng (CMS, API, Payment Gateway)',
+      docType: 'Architecture',
+      system: 'Hỗ trợ hạ tầng cho hệ thống ứng dụng khách hàng',
+      severity: 'P1 - Critical',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-14',
+      title: 'Quản lý Danh mục Tên miền (DNS), SSL & Ứng dụng Di động NDS',
+      docType: 'SOP',
+      system: 'Các việc còn lại & phát sinh',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
+    },
+    {
+      id: 'KB-NDS-15',
+      title: 'Quản lý 20 Hợp đồng Dịch vụ IT, Bản quyền Phần mềm & Nhà cung cấp',
+      docType: 'SOP',
+      system: 'Các việc còn lại & phát sinh',
+      severity: 'P2 - High',
+      status: 'Chờ bàn giao',
+      owner: '',
+      updatedAt: '',
+      reviewDate: '',
+      summary: '',
+      steps: '',
+      commands: '',
+      rollback: '',
+      checklist: [],
+      tags: [],
+      attachments: []
     }
   ];
 
@@ -537,6 +687,9 @@
     if (lblImport) lblImport.style.display = isAdmin ? 'inline-flex' : 'none';
     // - Editor KHÔNG được quản lý user (Ẩn nút Quản lý User trên topbar)
     if (btnUserMgr) btnUserMgr.style.display = isAdmin ? 'inline-flex' : 'none';
+    // - Editor KHÔNG được khởi tạo trắng / reset toàn bộ bài viết
+    const btnReset = document.getElementById('btnResetArticles');
+    if (btnReset) btnReset.style.display = isAdmin ? 'inline-flex' : 'none';
     // - Editor KHÔNG được xóa bài viết
     if (btnDelete) btnDelete.style.display = isAdmin ? 'inline-flex' : 'none';
 
@@ -759,9 +912,7 @@
           const seedData = await seedRes.json();
           if (Array.isArray(seedData) && seedData.length > 0) {
             const saved = localStorage.getItem(STORAGE_KEY);
-            let savedCount = 0;
-            try { savedCount = saved ? JSON.parse(saved).length : 0; } catch (_) {}
-            if (savedCount < seedData.length) {
+            if (!saved) {
               articles = seedData;
               localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
               renderAll();
@@ -779,7 +930,7 @@
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 6) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           articles = parsed;
           renderAll();
           return;
@@ -1020,16 +1171,16 @@
         escapeHtml(art.title) +
         '</h3>' +
         '<p class="article-summary">' +
-        escapeHtml(art.summary) +
+        escapeHtml(art.summary || 'Chưa có ghi chú bàn giao — Bấm để người bàn giao cập nhật trực tiếp.') +
         '</p>' +
         '<div class="article-meta">' +
         '<div class="tag-list">' +
         tagsHtml +
         '</div>' +
         '<div>👤 ' +
-        escapeHtml(art.owner) +
-        ' &nbsp;|&nbsp; 📅 Rà soát: ' +
-        escapeHtml(art.reviewDate || 'N/A') +
+        escapeHtml(art.owner || 'Chờ bàn giao') +
+        ' &nbsp;|&nbsp; 📅 Ngày: ' +
+        escapeHtml(art.reviewDate || 'Chưa ghi nhận') +
         '</div>' +
         '</div>';
 
@@ -1326,9 +1477,11 @@
     const secSummary = document.createElement('div');
     secSummary.className = 'reader-section';
     secSummary.innerHTML =
-      '<h3>1. Triệu chứng / Mục đích (Overview &amp; Symptoms)</h3>' +
+      '<h3>1. Mục đích / Ghi chú bàn giao</h3>' +
       '<div class="reader-text">' +
-      escapeHtml(art.summary) +
+      (art.summary && art.summary.trim()
+        ? escapeHtml(art.summary)
+        : '<p style="color:var(--text-muted); font-style:italic; margin:0;">(Chưa có nội dung — Người bàn giao bấm "✏️ Chỉnh sửa bài viết" để ghi chép trực tiếp vào đây)</p>') +
       '</div>';
     body.appendChild(secSummary);
 
@@ -1336,9 +1489,11 @@
     const secSteps = document.createElement('div');
     secSteps.className = 'reader-section';
     secSteps.innerHTML =
-      '<h3>2. Các bước Chẩn đoán &amp; Thực thi (Step-by-Step Procedure)</h3>' +
+      '<h3>2. Nội dung chi tiết &amp; Hướng dẫn vận hành</h3>' +
       '<div class="reader-text">' +
-      escapeHtml(art.steps) +
+      (art.steps && art.steps.trim()
+        ? escapeHtml(art.steps)
+        : '<p style="color:var(--text-muted); font-style:italic; margin:0;">(Chưa có nội dung chi tiết — Người bàn giao bấm "✏️ Chỉnh sửa bài viết" để ghi chép các bước thao tác vào đây)</p>') +
       '</div>';
     body.appendChild(secSteps);
 
@@ -1909,6 +2064,22 @@
 
     document.getElementById('articleForm').addEventListener('submit', handleFormSubmit);
     document.getElementById('btnExportJson').addEventListener('click', exportJson);
+
+    const btnResetArticles = document.getElementById('btnResetArticles');
+    if (btnResetArticles) {
+      btnResetArticles.addEventListener('click', function () {
+        if (!canDeleteOrImport()) {
+          showToast('🛑 Từ chối truy cập: Chỉ Admin mới có quyền khởi tạo lại danh sách bàn giao!');
+          return;
+        }
+        if (!confirm('Khởi tạo lại toàn bộ 15 hạng mục về trạng thái trắng để người bàn giao note trực tiếp?')) return;
+        articles = JSON.parse(JSON.stringify(DEFAULT_ARTICLES));
+        saveArticles('kb(reset): reset all articles to empty templates for direct handover notes');
+        renderAll();
+        showToast('🧹 Đã khởi tạo lại 15 hạng mục bàn giao trắng!');
+      });
+    }
+
     document.getElementById('inputImportJson').addEventListener('change', function (e) {
       if (e.target.files && e.target.files[0]) {
         importJson(e.target.files[0]);
