@@ -54,6 +54,9 @@
         ⬆️ Nhập JSON
       </label>
       <input type="file" id="inputImportJson" accept=".json" style="display:none;" aria-label="Nhập file JSON" />
+      <button type="button" id="btnResetArticles" class="btn" title="Khởi tạo lại bảng trắng để người bàn giao note trực tiếp" style="display:none;">
+        🧹 Khởi tạo trắng
+      </button>
       <button type="button" id="btnThemeToggle" class="btn" aria-label="Đổi giao diện Sáng/Tối">
         🌓 Giao diện
       </button>
@@ -176,42 +179,26 @@
             <ul id="p1QuickList" class="p1-list"></ul>
           </div>
 
-          <!-- Widget 2: Collapsible NDS IT FAQ -->
+          <!-- Widget 2: Hướng dẫn người bàn giao ghi chú trực tiếp -->
           <div class="widget-card">
-            <h3 class="widget-title">❓ Tra Cứu Nhanh Vận Hành IT NDS (FAQ)</h3>
+            <h3 class="widget-title">💡 Hướng Dẫn Bàn Giao &amp; Ghi Chép Trực Tiếp</h3>
             <div id="faqContainer">
               <details class="faq-item" open>
-                <summary class="faq-question">1. Mã code in (Department Code) trên máy in 10.86.6.200 của từng phòng ban là gì?</summary>
+                <summary class="faq-question">1. Người bàn giao ghi chép trực tiếp vào hệ thống như thế nào?</summary>
                 <div class="faq-answer">
-                  • <strong>GA</strong>: <code>111222</code> (Được in màu)<br/>
-                  • <strong>TECHNICAL</strong>: <code>111333</code> (Chỉ in trắng đen)<br/>
-                  • <strong>R&amp;D</strong>: <code>111444</code> (Chỉ in trắng đen)<br/>
-                  • <strong>SMK</strong>: <code>111555</code> (Được in màu)<br/>
-                  • <strong>PS</strong>: <code>111666</code> (Chỉ in trắng đen)<br/>
-                  <em>(Hết mực/lỗi máy in gọi NCC Siêu Việt: Ms Hạnh - 0908 997 036)</em>
+                  Chọn đúng hạng mục cần bàn giao trong danh sách, bấm <strong>✏️ Chỉnh sửa bài viết</strong> để người bàn giao trực tiếp gõ thông tin, hướng dẫn thực tế, tài khoản, cấu hình và checklist mà không cần soạn thảo thủ công bên ngoài.
+                </div>
+              </details>
+              <details class="faq-item" open>
+                <summary class="faq-question">2. Làm thế nào để upload các file tài liệu và biểu mẫu bàn giao?</summary>
+                <div class="faq-answer">
+                  Bấm vào bài viết bất kỳ, kéo thả file (PDF, Word, Excel, ZIP...) vào khung <strong>📁 Tài Liệu Bàn Giao Đính Kèm</strong> hoặc mở <strong>📁 Kho Tài Liệu</strong> trên thanh điều hướng để xem và tải về tất cả tài liệu đã nhận.
                 </div>
               </details>
               <details class="faq-item">
-                <summary class="faq-question">2. Các mốc ngày đối soát cố định hàng tháng của IT NDS là ngày nào?</summary>
+                <summary class="faq-question">3. Quyền của tài khoản Editor trong các buổi bàn giao là gì?</summary>
                 <div class="faq-answer">
-                  • <strong>Ngày 03 hàng tháng</strong>: Đối soát CMC Cloud (<code>portalv2.cloud.cmctelecom.vn</code>)<br/>
-                  • <strong>Ngày 05 hàng tháng</strong>: Đối soát tài khoản Gapowork với Ms Thủy (<code>+84 368 939 989</code>)<br/>
-                  • <strong>Ngày 09 hàng tháng</strong>: Đối soát license M365 &amp; PowerBI với Techdata (Ms My: <code>0965 018 267</code>)<br/>
-                  • <strong>Cuối tháng</strong>: Tải Invoice OpenAI &amp; Google AI Flow trình thanh toán.
-                </div>
-              </details>
-              <details class="faq-item">
-                <summary class="faq-question">3. Quy hoạch dải IP / VLAN tại Văn phòng NDS (42/2 Nguyễn Văn Trỗi) như thế nào?</summary>
-                <div class="faq-answer">
-                  Router Draytek (<code>10.86.5.254</code>) cân bằng tải 2 line VNPT (IP tĩnh <code>14.241.230.149</code>) &amp; FPT, cấp DHCP cho:<br/>
-                  • <strong>VLAN 10.86.6.0/24</strong>: Dành cho máy tính/thiết bị người dùng (User) &amp; Máy in (<code>10.86.6.200</code>).<br/>
-                  • <strong>VLAN 10.86.5.0/24</strong>: Dành cho thiết bị mạng (Switch <code>10.86.5.247</code>, Meraki AP <code>10.86.5.1-2</code>, Máy chấm công <code>10.86.5.200</code>).
-                </div>
-              </details>
-              <details class="faq-item">
-                <summary class="faq-question">4. Khi nào được bật máy chủ ảo VM Misa cũ (10.86.81.12)?</summary>
-                <div class="faq-answer">
-                  VM Misa (<code>10.86.81.12</code>) chứa dữ liệu kế toán cũ từ 2012–2023 và mặc định <strong>tắt (Powered Off)</strong>. Chỉ bật lên trên vCenter khi có yêu cầu lấy số liệu từ bộ phận FAC/HR, sau khi lấy xong phải tắt ngay.
+                  Tài khoản có quyền <strong>Editor</strong> có thể tạo bài viết mới, chỉnh sửa nội dung bài viết và tải tài liệu lên trực tiếp trên website. Toàn bộ các thao tác can thiệp mã nguồn GitHub, Xuất/Nhập JSON được bảo vệ và ẩn hoàn toàn.
                 </div>
               </details>
             </div>
@@ -330,14 +317,15 @@
           </div>
 
           <div class="form-group">
-            <label for="inpSystem" class="form-label">Hệ thống (System Category) *</label>
+            <label for="inpSystem" class="form-label">Hạng mục bàn giao (Category) *</label>
             <select id="inpSystem" class="form-control" required>
-              <option value="Cloud & Infrastructure">Cloud &amp; Infrastructure</option>
-              <option value="Network & Firewall">Network &amp; Firewall</option>
-              <option value="Identity & Security (IAM)">Identity &amp; Security (IAM)</option>
-              <option value="Database & Storage">Database &amp; Storage</option>
-              <option value="CI/CD & DevOps">CI/CD &amp; DevOps</option>
-              <option value="Endpoint & Helpdesk">Endpoint &amp; Helpdesk</option>
+              <option value="Helpdesk">1. Helpdesk &amp; Biểu mẫu</option>
+              <option value="Hệ thống ứng dụng nội bộ">2. Ứng dụng nội bộ (Gapo, Jira, Wiki, Bitbucket, Misa, Web, CRM)</option>
+              <option value="Hệ thống hạ tầng">3. Hạ tầng &amp; Server QTSC (Mạng VP, Máy in, Máy chấm công, VMware)</option>
+              <option value="Hệ thống Cloud">4. Hệ thống Cloud (AWS, GCP)</option>
+              <option value="Microsoft services">5. Microsoft Services (M365, Exchange, SharePoint)</option>
+              <option value="Hỗ trợ hạ tầng cho hệ thống ứng dụng khách hàng">6. Ứng dụng khách hàng (CMS, API, Payment Gateway)</option>
+              <option value="Các việc còn lại &amp; phát sinh">7. Tên miền, App &amp; 20 Hợp đồng IT</option>
             </select>
           </div>
 
@@ -345,39 +333,41 @@
             <label for="inpSeverity" class="form-label">Mức độ ưu tiên (Severity) *</label>
             <select id="inpSeverity" class="form-control" required>
               <option value="P1 - Critical">P1 - Critical</option>
-              <option value="P2 - High">P2 - High</option>
+              <option value="P2 - High" selected>P2 - High</option>
               <option value="P3 - Normal">P3 - Normal</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="inpStatus" class="form-label">Trạng thái kiểm chứng (Status) *</label>
+            <label for="inpStatus" class="form-label">Trạng thái bàn giao (Status) *</label>
             <select id="inpStatus" class="form-control" required>
+              <option value="Chờ bàn giao" selected>Chờ bàn giao</option>
+              <option value="Đang bàn giao">Đang bàn giao</option>
+              <option value="Đã bàn giao">Đã bàn giao</option>
               <option value="Verified">Verified</option>
-              <option value="Needs Review">Needs Review</option>
               <option value="Draft">Draft</option>
-              <option value="Deprecated">Deprecated</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="inpOwner" class="form-label">Kỹ sư / Nhóm phụ trách (Owner) *</label>
-            <input type="text" id="inpOwner" class="form-control" required placeholder="VD: Trương Duy Ngữ / Phan Hoài Minh" />
+            <label for="inpOwner" class="form-label">Người bàn giao / Người nhận *</label>
+            <input type="text" id="inpOwner" class="form-control" placeholder="VD: Phan Hoài Minh / Trương Duy Ngữ" />
           </div>
 
           <div class="form-group">
-            <label for="inpReviewDate" class="form-label">Ngày rà soát định kỳ (Review Date) *</label>
-            <input type="date" id="inpReviewDate" class="form-control" required />
+            <label for="inpReviewDate" class="form-label">Ngày bàn giao / Rà soát</label>
+            <input type="date" id="inpReviewDate" class="form-control" />
           </div>
 
           <div class="form-group full">
-            <label for="inpSummary" class="form-label">Tóm tắt triệu chứng / Mục đích bài viết *</label>
-            <textarea id="inpSummary" class="form-control" required placeholder="Mô tả ngắn gọn triệu chứng lỗi, mã lỗi hoặc mục tiêu của quy trình..."></textarea>
+            <label for="inpSummary" class="form-label">Tóm tắt mục đích / Ghi chú bàn giao</label>
+            <textarea id="inpSummary" class="form-control" placeholder="Người bàn giao trực tiếp ghi chú tóm tắt mục tiêu, đầu mối, phạm vi bàn giao tại đây..."></textarea>
           </div>
 
           <div class="form-group full">
-            <label for="inpSteps" class="form-label">Các bước chẩn đoán &amp; Thực thi chi tiết *</label>
-            <textarea id="inpSteps" class="form-control" required placeholder="Bước 1: Kiểm tra trạng thái dịch vụ...&#10;Bước 2: Phân tích log...&#10;Bước 3: Thực hiện khắc phục..."></textarea>
+            <label for="inpSteps" class="form-label">Nội dung chi tiết &amp; Hướng dẫn vận hành</label>
+            <textarea id="inpSteps" class="form-control" style="min-height:160px;" placeholder="Người bàn giao trực tiếp ghi chép các bước thao tác, hướng dẫn cấu hình, lưu ý vận hành tại đây..."></textarea>
+          </div>
           </div>
 
           <div class="form-group full">
